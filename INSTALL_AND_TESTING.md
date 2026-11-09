@@ -1,0 +1,261 @@
+# Instalasi dan Pengujian Lokal — YT Music Custom Player & Whitelist Scrobbler
+
+Dokumen ini menjelaskan cara memasang ekstensi secara lokal menggunakan **Load unpacked**, memverifikasi selector DOM YT Music, dan menjalankan pengujian end-to-end manual.
+
+## 1. Prasyarat
+
+- Google Chrome atau Chromium versi yang mendukung Manifest V3.
+- Folder repository ekstensi ini: `F:\TOY4U\Repo\yt-player-ext`.
+- Akses ke `https://music.youtube.com`.
+- Login YT Music hanya bila diperlukan oleh akun pengguna. Jangan memasukkan kredensial ke script atau membagikan cookie.
+- Untuk pengujian playback, pastikan browser mengizinkan audio dan tab player tidak dibisukan.
+
+## 2. Side-load ekstensi di Chrome
+
+1. Buka `chrome://extensions`.
+2. Aktifkan **Developer mode** di kanan atas.
+3. Klik **Load unpacked**.
+4. Pilih folder:
+
+   `F:\TOY4U\Repo\yt-player-ext`
+
+5. Pastikan kartu ekstensi **YT Music Custom Player & Whitelist Scrobbler** muncul tanpa pesan error.
+6. Klik **Details** dan verifikasi:
+   - Extension version: `3.2.5`.
+   - Site access hanya untuk `music.youtube.com`.
+   - Popup tersedia ketika ikon ekstensi diklik.
+7. Jika sebelumnya versi lama terpasang, gunakan **Reload** setelah setiap perubahan file. Bila service worker tampak macet, klik **Remove**, lalu Load unpacked kembali.
+
+### Memeriksa error instalasi
+
+Pada kartu ekstensi, klik **Errors**. Error pada `manifest.json`, `background.js`, atau `content.js` harus diperbaiki sebelum pengujian playback. Klik **Service worker** pada halaman detail untuk membuka DevTools service worker dan melihat log background.
+
+## 3. Persiapan state bersih
+
+Sebelum pengujian, buka popup ekstensi dan bersihkan histori bila diperlukan. Untuk reset menyeluruh:
+
+1. Buka DevTools pada halaman `music.youtube.com` (`F12`).
+2. Buka tab **Application** → **Storage**.
+3. Pilih **Clear site data** hanya jika Anda memahami bahwa ini dapat menghapus state situs/login lokal.
+4. Atau, dari DevTools Console ekstensi/content page, hapus hanya storage ekstensi dengan:
+
+```js
+chrome.storage.local.clear();
+```
+
+Setelah reset, reload ekstensi dari `chrome://extensions` dan reload tab YT Music.
+
+## 4. Verifikasi live selector DOM
+
+Selector dapat berubah karena YT Music adalah SPA. Jalankan pemeriksaan berikut pada tab `music.youtube.com` yang sudah dimuat. Buka DevTools → **Console**, lalu tempel satu blok pada satu waktu.
+
+### 4.1 Pemeriksaan selector utama
+
+```js
+const selectors = {
+  resultPlayButton: 'ytmusic-responsive-list-item-renderer .play-button',
+  playerTitle: '.title.ytmusic-player-bar, ytmusic-player-bar .title',
+  autoplay: 'ytmusic-player-bar .toggle.ytmusic-player-bar, ytmusic-player-bar [aria-label*="Autoplay"]',
+  adMarkers: '.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text'
+};
+
+Object.entries(selectors).map(([name, selector]) => ({
+  name,
+  selector,
+  count: document.querySelectorAll(selector).length,
+  first: document.querySelector(selector)
+}));
+```
+
+Interpretasi:
+
+- Pada halaman hasil pencarian, `resultPlayButton.count` diharapkan lebih besar dari 0 setelah hasil selesai dirender.
+- Pada halaman playback, `playerTitle.count` diharapkan lebih besar dari 0.
+- `autoplay.count` dapat 0 bila kontrol belum dirender atau platform mengubah markup; catat selector aktual jika demikian.
+- `adMarkers.count` biasanya 0 saat tidak ada iklan. Saat iklan aktif, marker dapat berubah dan harus dicatat.
+
+### 4.2 Temukan kandidat elemen secara eksploratif
+
+Jika selector gagal, gunakan pemeriksaan berikut untuk melihat struktur aktual tanpa mengubah halaman:
+
+```js
+[...document.querySelectorAll('ytmusic-responsive-list-item-renderer')]
+  .slice(0, 5)
+  .map((el) => ({
+    text: el.innerText?.slice(0, 200),
+    buttons: [...el.querySelectorAll('button, [role="button"]')].map((b) => ({
+      aria: b.getAttribute('aria-label'),
+      cls: b.className
+    }))
+  }));
+```
+
+Untuk title dan player:
+
+```js
+({
+  titleCandidates: [...document.querySelectorAll('ytmusic-player-bar, .title')]
+    .slice(0, 10)
+    .map((el) => ({text: el.textContent?.trim(), className: String(el.className)})),
+  videos: [...document.querySelectorAll('video')].map((v) => ({
+    paused: v.paused,
+    ended: v.ended,
+    currentTime: v.currentTime,
+    duration: v.duration,
+    classes: v.className
+  }))
+});
+```
+
+Jangan langsung mengganti selector hanya berdasarkan satu sesi. Ambil sampel saat halaman search, halaman playback, setelah SPA navigation, dan saat iklan bila tersedia.
+
+## 5. Pengujian end-to-end manual
+
+Gunakan queue kecil untuk mengurangi waktu pengujian. Contoh input:
+
+```text
+Nama Lagu Valid ~ Nama Artis
+Lagu Kedua ~ Artis Kedua
+```
+
+### E2E-01 — Instalasi dan popup
+
+1. Load unpacked ekstensi.
+2. Klik ikon ekstensi.
+3. Pastikan popup menampilkan tab Playlist dan Histori.
+4. Pastikan textarea, tombol start, previous, play/pause, next, clear history, dan export CSV terlihat.
+5. Pastikan tidak ada error di `chrome://extensions`.
+
+**Expected:** popup terbuka dan status awal menampilkan `Siap` atau status playback yang tersimpan.
+
+### E2E-02 — Memulai playlist dan dedicated tab
+
+1. Masukkan satu atau dua baris queue.
+2. Klik **Mulai Playlist Baru**.
+3. Pastikan hanya satu tab player khusus yang digunakan.
+4. Pastikan tab berpindah ke halaman search YT Music dengan query yang mengandung `Official Audio`.
+5. Tunggu hasil SPA dirender.
+
+**Expected:** hasil pertama dipilih tanpa membuat tab player tambahan. Queue menandai item aktif.
+
+Popup juga menampilkan status diagnostik seperti `player_ready`, `play_requested`, `playing`, `autoplay_blocked`, `scrobbled`, atau `scrobble_rejected`. Detail status ini membantu membedakan kegagalan autoplay dari whitelist mismatch atau penolakan background.
+
+### E2E-03 — Playback dan autoplay
+
+1. Pastikan video/track mulai berjalan.
+2. Buka DevTools Console dan cek `document.querySelector('video')`.
+3. Amati kontrol autoplay.
+
+**Expected:** autoplay dimatikan ketika kontrol tersedia dan aktif. Tidak ada navigasi otomatis ke rekomendasi setelah track selesai selain progression queue ekstensi.
+
+### E2E-04 — Continuous scrobble threshold
+
+1. Jalankan track whitelist selama kurang dari 30 detik, lalu pause.
+2. Buka Histori.
+3. Jalankan kembali track sampai melewati 30 detik eligible playback.
+4. Buka Histori kembali.
+
+**Expected:** playback di bawah 30 detik tidak menghasilkan scrobble. Setelah 30 detik playback konten yang valid, muncul tepat satu entri histori.
+
+### E2E-05 — Pause/resume
+
+1. Putar track selama sekitar 10 detik.
+2. Pause selama sekitar 10 detik.
+3. Resume hingga total waktu aktif melewati 30 detik.
+
+**Expected:** waktu pause tidak dihitung sebagai eligible playback. Scrobble hanya terjadi setelah 30 detik waktu konten yang benar-benar berjalan.
+
+### E2E-06 — Whitelist mismatch
+
+1. Masukkan queue dengan query yang jelas tidak cocok dengan title hasil.
+2. Putar atau skip track tersebut setelah kurang dari/lebih dari 30 detik.
+3. Periksa Histori.
+
+**Expected:** track yang tidak lolos whitelist tidak dicatat, tetapi queue tetap dapat berpindah ke item berikutnya.
+
+### E2E-07 — Manual Skip
+
+1. Putar track valid kurang dari 30 detik, klik Skip.
+2. Pastikan item berikutnya dimuat.
+3. Ulangi setelah track valid melewati 30 detik.
+
+**Expected:** skip di bawah threshold tidak mencatat histori. Skip setelah threshold dan whitelist valid mencatat tepat satu scrobble sebelum berpindah.
+
+### E2E-08 — Natural end dan duplicate events
+
+1. Biarkan track berakhir secara natural.
+2. Periksa queue dan histori.
+3. Jika event end terpanggil lebih dari sekali, pastikan queue tidak melompat dua item.
+
+**Expected:** hanya satu transisi ke item berikutnya dan maksimal satu histori untuk session tersebut.
+
+### E2E-09 — Iklan
+
+1. Jalankan track ketika sesi menampilkan iklan, jika tersedia.
+2. Amati `document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text')`.
+3. Jangan menganggap waktu iklan sebagai waktu konten.
+
+**Expected:** timer eligible berhenti/diabaikan selama ad-state aktif; event ended dari iklan tidak memajukan queue secara keliru.
+
+### E2E-10 — SPA navigation dan rerender
+
+1. Navigasikan antar hasil search dan playback tanpa reload penuh.
+2. Amati Console untuk error.
+3. Ulangi ketika player bar atau hasil search mengalami rerender.
+
+**Expected:** `MutationObserver` memasang kembali sinkronisasi tanpa membuat interval/observer tak terbatas; autoplay dan title tetap dapat dideteksi.
+
+### E2E-11 — Service worker restart dan tab close
+
+1. Saat queue aktif, buka `chrome://extensions`.
+2. Klik link **Service worker** atau reload ekstensi.
+3. Tutup dedicated player tab secara manual.
+4. Mulai item berikutnya dari popup.
+
+**Expected:** service worker merekonsiliasi tab yang masih ada; jika tab ditutup, ID direset dan tab player dapat dibuat kembali tanpa banyak tab yatim.
+
+### E2E-12 — CSV export
+
+1. Pastikan histori memiliki setidaknya satu item.
+2. Gunakan title/URL yang mengandung koma, quote, atau karakter non-ASCII bila memungkinkan.
+3. Klik **Export CSV**.
+4. Buka file CSV menggunakan editor teks atau spreadsheet.
+
+**Expected:** setiap field ter-quote, quote internal menjadi `""`, timestamp menggunakan format lokal, dan URL/title tidak merusak kolom.
+
+## 6. Debugging cepat
+
+### Content script tidak aktif
+
+- Pastikan URL dimulai dengan `https://music.youtube.com/`.
+- Reload tab setelah reload ekstensi.
+- Periksa `chrome://extensions` → Details → Site access.
+- Pastikan tidak sedang memakai domain lain seperti `www.youtube.com` yang tidak termasuk `matches`.
+
+Jika halaman `chrome://extensions` menampilkan `Extension context invalidated`, ekstensi telah di-reload saat tab YT Music masih menggunakan content script lama. Klik **Reload** pada ekstensi, lalu lakukan hard reload pada tab YT Music (`Ctrl+Shift+R`). Error lama tidak menunjukkan selector baru gagal; itu adalah content script lama yang kehilangan konteks ekstensi. Wrapper storage/messaging pada versi terbaru juga menangani kondisi ini tanpa unhandled promise.
+
+### Search result tidak terpilih
+
+- Jalankan pemeriksaan `resultPlayButton` pada bagian live selector.
+- Tunggu sampai SPA selesai merender.
+- Catat selector aktual dan perbarui `SELECTORS.resultPlayButton` hanya setelah diverifikasi pada beberapa keadaan.
+
+### Scrobble tidak muncul
+
+- Pastikan title DOM cocok dengan minimal token whitelist.
+- Pastikan video benar-benar playing, bukan paused/buffering.
+- Pastikan tidak ada ad marker aktif.
+- Pastikan `currentSessionId`, `currentExpectedQuery`, dan `scrobbleHistory` tersedia di `chrome.storage.local`.
+- Periksa status popup: `whitelist_mismatch` berarti title tidak cocok; `ad_active` berarti timer sedang ditahan; `background_rejected` atau `invalid-track-info` berarti payload tidak diterima service worker.
+- Buka DevTools service worker untuk melihat error message/payload.
+
+### Permission atau host error
+
+- Jangan memperluas permission ke `<all_urls>` hanya untuk mengatasi selector.
+- Pertahankan target pada `https://music.youtube.com/*` kecuali ada kebutuhan produk yang jelas dan terdokumentasi.
+
+## 7. Batasan pengujian audit ini
+
+Pengujian live DOM otomatis tidak selesai pada lingkungan audit karena Playwright MCP memerlukan executable Firefox yang belum terpasang, sedangkan browser lokal sesi ini tidak tersedia. Karena itu, selector di atas sudah diverifikasi secara kode dan disediakan prosedur live verification, tetapi hasil selector aktual pada sesi pengguna harus dicatat saat menjalankan langkah manual.
+
+Jangan menganggap hasil `count > 0` saja sebagai jaminan playback benar. Verifikasi juga title, URL, state video, ad-state, dan transisi queue pada beberapa navigasi SPA.

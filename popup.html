@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="styles.css">
+  <title>YT Music Scrobbler</title>
+</head>
+<body>
+  <div class="title-row">
+    <h2>YT Music Player</h2>
+    <div class="display-settings" role="group" aria-label="Ukuran popup">
+      <button class="size-btn" data-size="small" type="button" title="Ukuran kecil">S</button>
+      <button class="size-btn active" data-size="medium" type="button" title="Ukuran sedang">M</button>
+      <button class="size-btn" data-size="large" type="button" title="Ukuran besar">L</button>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Navigasi">
+    <button id="tabPlaylistBtn" class="active" type="button">Playlist</button>
+    <button id="tabHistoryBtn" type="button">Histori (Scrobble)</button>
+  </div>
+
+  <div id="status" class="status" role="status" aria-live="polite">Memuat…</div>
+
+  <section id="playlistSection" aria-label="Playlist">
+    <label for="songList">Paste daftar lagu whitelist, satu per baris:</label>
+    <textarea id="songList" maxlength="20000" placeholder="Demons - Jacob Lee&#10;Gamelan Reggae - eL Utama"></textarea>
+    <button id="startBtn" type="button">▶ Mulai Playlist Baru</button>
+
+    <div class="player-controls" aria-label="Kontrol pemutaran">
+      <button id="prevBtn" type="button" title="Sebelumnya">⏮</button>
+      <button id="togglePlayBtn" type="button" title="Play / Pause">⏯</button>
+      <button id="nextBtn" type="button" title="Skip; scrobble hanya jika memenuhi syarat">⏭</button>
+    </div>
+
+    <h3>Antrean Saat Ini:</h3>
+    <ul id="queueList"></ul>
+  </section>
+
+  <section id="historySection" aria-label="Histori" style="display: none;">
+    <div class="history-actions">
+      <button id="clearHistoryBtn" type="button">Hapus Histori</button>
+      <button id="exportCsvBtn" type="button">Export CSV</button>
+    </div>
+    <ul id="historyList"></ul>
+  </section>
+
+  <script src="popup.js"></script>
+</body>
+</html>

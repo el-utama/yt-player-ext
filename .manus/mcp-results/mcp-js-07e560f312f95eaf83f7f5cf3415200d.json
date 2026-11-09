@@ -1,0 +1,8 @@
+In-app Browser JS state was preserved. Completed actions were not rolled back; refresh stale UI handles and continue only the remaining work.
+{"code":"READONLY_POLICY","method":"browser_evaluate_readonly","callIndex":4,"nextAction":"inspect_before_retry"}
+ERROR READONLY_POLICY
+This read-only request exceeds browser policy. Use a smaller expression focused on the needed data instead of retrying the same broad read.
+{"control":{"documentRevision":"rev_f731ead3-3096-4e6d-b8af-76671a007c80","error":{"code":"READONLY_POLICY","retryable":false},"requiresSnapshot":false,"status":"error","tabId":"tab_b7ed2345-dcd5-4b4f-9363-539d1aefe314"},"kind":"error","schema":"manus.browser/v1","warnings":["attribute selectors is not available in playwright.evaluate because the DOM is read-only","Use supported read-only DOM properties and a smaller expression; use locator actions for mutations."]}
+ERROR READONLY_POLICY
+This read-only request exceeds browser policy. Use a smaller expression focused on the needed data instead of retrying the same broad read.
+{"control":{"documentRevision":"rev_f731ead3-3096-4e6d-b8af-76671a007c80","error":{"code":"READONLY_POLICY","retryable":false},"requiresSnapshot":false,"status":"error","tabId":"tab_b7ed2345-dcd5-4b4f-9363-539d1aefe314"},"kind":"error","schema":"manus.browser/v1","warnings":["attribute selectors is not available in playwright.evaluate because the DOM is read-only","Use supported read-only DOM properties and a smaller expression; use locator actions for mutations."]}

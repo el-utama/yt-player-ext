@@ -1,0 +1,199 @@
+- generic [ref=e3]:
+  - navigation [ref=e5]:
+    - generic [ref=e6]:
+      - button "Guide" [ref=e8] [cursor=pointer]:
+        - generic [ref=e11]:
+          - img
+      - link "Beranda" [ref=e13] [cursor=pointer]:
+        - /url: /
+    - search [ref=e16]:
+      - generic "Telusuri" [ref=e17] [cursor=pointer]:
+        - generic [ref=e18]:
+          - combobox "Telusuri lagu, album, artis, podcast" [ref=e19]: Room for Your Storm eL Utama Official Audio
+          - generic "Hapus" [ref=e20]:
+            - button "Hapus" [ref=e21]:
+              - generic [ref=e24]:
+                - img
+    - generic [ref=e25]:
+      - button "Hubungkan ke perangkat" [ref=e27] [cursor=pointer]:
+        - generic [ref=e31]:
+          - img
+      - button "Buka menu avatar" [ref=e34] [cursor=pointer]
+  - generic [ref=e41]:
+    - link "Beranda" [ref=e43] [cursor=pointer]:
+      - generic [ref=e46]:
+        - img
+      - generic [ref=e49]: Beranda
+    - link "Eksplorasi" [ref=e51] [cursor=pointer]:
+      - generic [ref=e54]:
+        - img
+      - generic [ref=e57]: Eksplorasi
+    - link "Koleksi" [ref=e59] [cursor=pointer]:
+      - generic [ref=e62]:
+        - img
+      - generic [ref=e65]: Koleksi
+    - link "Upgrade" [ref=e67] [cursor=pointer]:
+      - generic [ref=e70]:
+        - img
+      - generic [ref=e73]: Upgrade
+  - main [ref=e74]:
+    - generic [ref=e76]:
+      - tablist [ref=e78]:
+        - generic [ref=e79]:
+          - tab "YT Music" [selected] [ref=e80] [cursor=pointer]
+          - tab "Koleksi" [ref=e81] [cursor=pointer]
+      - generic [ref=e83]:
+        - generic [ref=e86]:
+          - tab "Lagu" [ref=e89] [cursor=pointer]:
+            - generic [ref=e90]: Lagu
+          - tab "Artis" [ref=e93] [cursor=pointer]:
+            - generic [ref=e94]: Artis
+          - tab "Video" [ref=e97] [cursor=pointer]:
+            - generic [ref=e98]: Video
+          - tab "Episode" [ref=e101] [cursor=pointer]:
+            - generic [ref=e102]: Episode
+        - generic [ref=e103]:
+          - generic [ref=e108]:
+            - generic [ref=e110]:
+              - link "Putar Room for Your Storm - eL Utama" [ref=e112] [cursor=pointer]:
+                - /url: watch?v=hbBuT8ow-l8
+                - button "Putar Room for Your Storm - eL Utama" [ref=e118]:
+                  - generic [ref=e122]:
+                    - img
+              - generic [ref=e123]:
+                - generic [ref=e124]:
+                  - link "Room for Your Storm" [ref=e126] [cursor=pointer]:
+                    - /url: watch?v=hbBuT8ow-l8
+                  - generic "Lagu • eL Utama • 4 menit, 4 detik" [ref=e128]:
+                    - generic [ref=e129]: Lagu
+                    - generic [ref=e130]: •
+                    - link "eL Utama" [ref=e131] [cursor=pointer]:
+                      - /url: channel/UC8Q0maFnrt5t4DjzdFE14Pw
+                    - generic [ref=e132]: •
+                    - generic [ref=e133]: "4.04"
+                - generic [ref=e134]:
+                  - button "Putar" [ref=e137] [cursor=pointer]:
+                    - generic [ref=e141]:
+                      - img
+                    - generic [ref=e142]: Putar
+                  - button "Simpan ke playlist" [ref=e148] [cursor=pointer]:
+                    - generic [ref=e152]:
+                      - img
+                    - generic [ref=e153]: Simpan
+            - generic "Menu tindakan" [ref=e158]:
+              - button "Menu tindakan" [ref=e160] [cursor=pointer]:
+                - generic [ref=e164]:
+                  - img
+          - generic [ref=e170]:
+            - button "Putar After the Storm - eL Utama" [ref=e177]:
+              - generic [ref=e181] [cursor=pointer]:
+                - img
+            - generic [ref=e182]:
+              - generic "After the Storm (feat. Sienna Cruz Zarine)" [ref=e184]:
+                - link "After the Storm (feat. Sienna Cruz Zarine)" [ref=e185] [cursor=pointer]:
+                  - /url: watch?v=hIOqSRK5yrs
+              - generic [ref=e186]:
+                - generic "Lagu • eL Utama" [ref=e188]:
+                  - generic [ref=e189]: Lagu
+                  - generic [ref=e190]: •
+                  - link "eL Utama" [ref=e191] [cursor=pointer]:
+                    - /url: channel/UC8Q0maFnrt5t4DjzdFE14Pw
+                - generic "11 pemutaran" [ref=e192]:
+                  - text: •
+                  - generic [ref=e193]: 11 pemutaran
+            - generic "Menu tindakan":
+              - button "Menu tindakan" [ref=e195] [cursor=pointer]:
+                - generic [ref=e199]:
+                  - img
+          - generic [ref=e205]:
+            - button "Putar STORM INSIDE MY HEART - Music4Soul" [ref=e212]:
+              - generic [ref=e216] [cursor=pointer]:
+                - img
+            - generic [ref=e217]:
+              - generic "STORM INSIDE MY HEART" [ref=e219]:
+                - link "STORM INSIDE MY HEART" [ref=e220] [cursor=pointer]:
+                  - /url: watch?v=9A60f8UMo4I
+              - generic [ref=e221]:
+                - generic "Lagu • Music4Soul" [ref=e223]:
+                  - generic [ref=e224]: Lagu
+                  - generic [ref=e225]: •
+                  - link "Music4Soul" [ref=e226] [cursor=pointer]:
+                    - /url: channel/UCcCn_XqwpPivDKPSx624AtA
+                - generic "955 pemutaran" [ref=e227]:
+                  - text: •
+                  - generic [ref=e228]: 955 pemutaran
+            - generic "Menu tindakan":
+              - button "Menu tindakan" [ref=e230] [cursor=pointer]:
+                - generic [ref=e234]:
+                  - img
+          - generic [ref=e240]:
+            - button "Putar Sleeping Through Storms - Lyvorn Rune Zelric bunexa" [ref=e247]:
+              - generic [ref=e251] [cursor=pointer]:
+                - img
+            - generic [ref=e252]:
+              - generic "Sleeping Through Storms" [ref=e254]:
+                - link "Sleeping Through Storms" [ref=e255] [cursor=pointer]:
+                  - /url: watch?v=kTFI-gMWd5w
+              - generic [ref=e256]:
+                - generic "Lagu • Lyvorn Rune Zelric bunexa" [ref=e257]:
+                  - generic [ref=e258]:
+                    - generic [ref=e259]: Lagu
+                    - generic [ref=e260]: •
+                    - generic [ref=e261]: Lyvorn Rune Zelric bunexa
+                - generic "431 pemutaran" [ref=e262]:
+                  - text: •
+                  - generic [ref=e263]: 431 pemutaran
+            - generic "Menu tindakan":
+              - button "Menu tindakan" [ref=e265] [cursor=pointer]:
+                - generic [ref=e269]:
+                  - img
+          - generic [ref=e275]:
+            - button "Putar Northern Storm after You - Ash Arka Wibowo" [ref=e282]:
+              - generic [ref=e286] [cursor=pointer]:
+                - img
+            - generic [ref=e287]:
+              - generic "Northern Storm after You" [ref=e289]:
+                - link "Northern Storm after You" [ref=e290] [cursor=pointer]:
+                  - /url: watch?v=bxjoi-RkqUc
+              - generic [ref=e291]:
+                - generic "Lagu • Ash Arka Wibowo" [ref=e292]:
+                  - generic [ref=e293]:
+                    - generic [ref=e294]: Lagu
+                    - generic [ref=e295]: •
+                    - generic [ref=e296]: Ash Arka Wibowo
+                - generic "43 pemutaran" [ref=e297]:
+                  - text: •
+                  - generic [ref=e298]: 43 pemutaran
+            - generic "Menu tindakan":
+              - button "Menu tindakan" [ref=e300] [cursor=pointer]:
+                - generic [ref=e304]:
+                  - img
+          - generic [ref=e310]:
+            - button "Putar You’re The Calm After My Storm - Ridley Saputra" [ref=e317]:
+              - generic [ref=e321] [cursor=pointer]:
+                - img
+            - generic [ref=e322]:
+              - generic "You’re The Calm After My Storm" [ref=e324]:
+                - link "You’re The Calm After My Storm" [ref=e325] [cursor=pointer]:
+                  - /url: watch?v=mkf1wxpid7I
+              - generic [ref=e326]:
+                - generic "Lagu • Ridley Saputra" [ref=e327]:
+                  - generic [ref=e328]:
+                    - generic [ref=e329]: Lagu
+                    - generic [ref=e330]: •
+                    - generic [ref=e331]: Ridley Saputra
+                - generic "71 pemutaran" [ref=e332]:
+                  - text: •
+                  - generic [ref=e333]: 71 pemutaran
+            - generic "Menu tindakan":
+              - button "Menu tindakan" [ref=e335] [cursor=pointer]:
+                - generic [ref=e339]:
+                  - img
+          - generic [ref=e345]:
+            - link "Ella Langley" [ref=e346] [cursor=pointer]:
+              - /url: channel/UCecnyZYofHiBVDJpx1XNYOQ
+            - generic [ref=e347]:
+              - generic "Ella Langley" [ref=e349]
+              - generic "Artis • 38,5 jt audiens bulanan" [ref=e351]:
+                - generic [ref=e352]:
+                  - generic [

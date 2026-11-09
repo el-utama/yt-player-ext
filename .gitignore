@@ -1,0 +1,21 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Node / dependencies
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# Chrome extension unpacked builds / temp
+*.crx
+*.zip
+
+# Editor / IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+*.log
