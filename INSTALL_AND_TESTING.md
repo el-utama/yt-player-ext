@@ -21,7 +21,7 @@ Dokumen ini menjelaskan cara memasang ekstensi secara lokal menggunakan **Load u
 
 5. Pastikan kartu ekstensi **YT Music Custom Player & Whitelist Scrobbler** muncul tanpa pesan error.
 6. Klik **Details** dan verifikasi:
-   - Extension version: `3.2.5`.
+   - Extension version: `3.2.6`.
    - Site access hanya untuk `music.youtube.com`.
    - Popup tersedia ketika ikon ekstensi diklik.
 7. Jika sebelumnya versi lama terpasang, gunakan **Reload** setelah setiap perubahan file. Bila service worker tampak macet, klik **Remove**, lalu Load unpacked kembali.
@@ -148,7 +148,15 @@ Popup juga menampilkan status diagnostik seperti `player_ready`, `play_requested
 
 **Expected:** autoplay dimatikan ketika kontrol tersedia dan aktif. Tidak ada navigasi otomatis ke rekomendasi setelah track selesai selain progression queue ekstensi.
 
-### E2E-04 — Continuous scrobble threshold
+### E2E-04 — Pause sebelum navigasi (Previous/Next)
+
+1. Putar track valid.
+2. Tekan **Previous** atau **Next** saat lagu berjalan.
+3. Amati apakah browser menampilkan dialog "Anda yakin ingin meninggalkan halaman ini?".
+
+**Expected:** tidak ada dialog konfirmasi karena extension mengirim `PAUSE` ke content script sebelum navigasi tab.
+
+### E2E-05 — Continuous scrobble threshold
 
 1. Jalankan track whitelist selama kurang dari 30 detik, lalu pause.
 2. Buka Histori.
@@ -197,7 +205,35 @@ Popup juga menampilkan status diagnostik seperti `player_ready`, `play_requested
 
 **Expected:** timer eligible berhenti/diabaikan selama ad-state aktif; event ended dari iklan tidak memajukan queue secara keliru.
 
-### E2E-10 — SPA navigation dan rerender
+### E2E-10 — Multibahasa autoplay/ad detection
+
+1. Ubah bahasa YouTube Music ke Prancis/Spanyol/Jerman (Settings → Language).
+2. Putar track dan amati apakah kontrol autoplay tetap terdeteksi dan dimatikan.
+3. Jika ada iklan, amati apakah status `scrobble_paused` muncul.
+
+**Expected:** label autoplay (`lecture automatique`, `reproducción automática`, `automatische Wiedergabe`, dll.) dan label iklan (`publicité`, `anuncio`, `werbung`, dll.) dikenali; status popup menunjukkan `autoplay_blocked` / `scrobble_paused` sesuai kondisi.
+
+### E2E-11 — Acak urutan antrean (Shuffle)
+
+1. Masukkan 5+ baris queue.
+2. Centang **Acak urutan antrean saat memulai**.
+3. Klik **Mulai Playlist Baru**.
+4. Periksa urutan di **Antrean Saat Ini** — harus berbeda dari urutan input.
+5. Ulangi langkah 3 beberapa kali — urutan harus berbeda setiap kali.
+
+**Expected:** urutan lagu diacak (Fisher-Yates) setiap kali memulai playlist baru.
+
+### E2E-12 — Durasi acak per lagu
+
+1. Centang **Durasi acak (min–max detik)**, isi Min `10`, Max `20`.
+2. Mulai playlist dengan 2+ lagu.
+3. Amati waktu pemutaran tiap lagu di DevTools (`video.currentTime`) dan status popup.
+4. Verifikasi lagu berpindah otomatis antara 10–20 detik eligible playback (bukan wall-clock).
+5. Periksa histori: lagu ≥30 detik eligible → scrobble; lagu <30 detik → tidak scrobble.
+
+**Expected:** advance otomatis pada target acak Min–Max; scrobble hanya jika ≥30 detik eligible.
+
+### E2E-13 — SPA navigation dan rerender
 
 1. Navigasikan antar hasil search dan playback tanpa reload penuh.
 2. Amati Console untuk error.
@@ -205,7 +241,7 @@ Popup juga menampilkan status diagnostik seperti `player_ready`, `play_requested
 
 **Expected:** `MutationObserver` memasang kembali sinkronisasi tanpa membuat interval/observer tak terbatas; autoplay dan title tetap dapat dideteksi.
 
-### E2E-11 — Service worker restart dan tab close
+### E2E-14 — Service worker restart dan tab close
 
 1. Saat queue aktif, buka `chrome://extensions`.
 2. Klik link **Service worker** atau reload ekstensi.
@@ -214,7 +250,7 @@ Popup juga menampilkan status diagnostik seperti `player_ready`, `play_requested
 
 **Expected:** service worker merekonsiliasi tab yang masih ada; jika tab ditutup, ID direset dan tab player dapat dibuat kembali tanpa banyak tab yatim.
 
-### E2E-12 — CSV export
+### E2E-15 — CSV export
 
 1. Pastikan histori memiliki setidaknya satu item.
 2. Gunakan title/URL yang mengandung koma, quote, atau karakter non-ASCII bila memungkinkan.

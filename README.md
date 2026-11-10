@@ -22,12 +22,17 @@ Extension ini menyediakan:
 - Pencarian organik melalui halaman YouTube Music, tanpa YouTube Data API.
 - Pemilihan hasil berdasarkan kecocokan judul dan artis.
 - Autoplay melalui player native YouTube Music dengan retry terbatas.
+- **Deteksi autoplay dan iklan multibahasa** (ID, EN, FR, DE, ES, IT, PT, RU, JA, KO, TH, TR, dll.).
+- **Pause otomatis sebelum navigasi** agar tidak muncul dialog "meninggalkan halaman" saat Previous/Next.
 - Tombol Play/Pause, Next, dan Previous dari popup.
 - Scrobble lokal setelah minimal 30 detik eligible playback.
 - Perlindungan whitelist agar lagu dari artis atau judul yang tidak sesuai tidak dicatat.
 - Penahanan timer ketika iklan terdeteksi.
+- **Durasi acak per lagu** (Min–Max detik) dengan advance otomatis.
+- **Acak urutan antrean** (shuffle) saat memulai playlist.
 - Histori lokal dan ekspor CSV.
-- Popup dengan tiga ukuran: S, M, dan L.
+- Popup dengan tiga ukuran: S, M, dan L (layout responsif).
+- **Indikator versi** di popup dengan status perlu reload.
 
 Extension ini ditujukan untuk penggunaan pribadi pada `https://music.youtube.com`.
 
@@ -118,7 +123,19 @@ Klik **Mulai Playlist Baru**. Extension akan:
 5. Berpindah ke halaman player.
 6. Mencoba menjalankan playback otomatis.
 
-### 5. Kontrol playback
+### 5. Opsi playback lanjutan
+
+#### Acak urutan antrean (Shuffle)
+Centang **Acak urutan antrean saat memulai** sebelum klik Mulai Playlist Baru. Urutan lagu akan diacak menggunakan Fisher-Yates shuffle sebelum disimpan.
+
+#### Durasi acak per lagu
+Centang **Durasi acak (min–max detik)** dan isi:
+- **Min:** durasi minimal menonton (detik), mis. `40`
+- **Max:** durasi maksimal menonton (detik), mis. `60`
+
+Setiap lagu akan diputar selama durasi acak antara Min–Max. Jika durasi tercapai, extension otomatis pindah ke lagu berikutnya (scrobble dicatat jika ≥30 detik eligible playback dan lolos whitelist). Di bawah 30 detik tidak akan mencatat scrobble.
+
+### 6. Kontrol playback
 
 - **Previous:** kembali ke item sebelumnya.
 - **Play/Pause:** mengubah status playback pada player.
@@ -126,14 +143,14 @@ Klik **Mulai Playlist Baru**. Extension akan:
 
 Next dan Previous mengubah `currentIndex` queue secara serial agar klik berulang tidak melewati beberapa lagu secara tidak sengaja.
 
-### 6. Histori dan ekspor
+### 7. Histori dan ekspor
 
 Buka tab **Histori (Scrobble)** untuk melihat histori lokal. Tersedia:
 
 - **Hapus Histori:** menghapus histori lokal.
 - **Export CSV:** mengunduh histori sebagai CSV dengan escaping quote dan timestamp lokal.
 
-### 7. Ukuran popup
+### 8. Ukuran popup
 
 Popup memiliki tiga mode:
 
@@ -340,12 +357,17 @@ It provides:
 - Organic navigation through YouTube Music search pages without the YouTube Data API.
 - Result selection based on title and artist matching.
 - Native YouTube Music playback attempts with bounded retries.
+- **Multilingual autoplay/ad detection** (ID, EN, FR, DE, ES, IT, PT, RU, JA, KO, TH, TR, etc.).
+- **Auto-pause before navigation** to prevent "leave page" dialogs on Previous/Next.
 - Popup Play/Pause, Next, and Previous controls.
 - Local scrobbling after at least 30 seconds of eligible playback.
 - Whitelist protection against recording unrelated titles or artists.
 - Ad-aware timing and navigation.
+- **Random listen duration per track** (Min–Max seconds) with auto-advance.
+- **Queue shuffle** (Fisher-Yates) on playlist start.
 - Local history and CSV export.
-- S, M, and L popup layouts.
+- S, M, and L popup layouts (responsive).
+- **Version indicator** in popup with reload status.
 
 The extension is intended for personal use on `https://music.youtube.com`.
 
@@ -429,7 +451,19 @@ Jakarta - Jogja<TAB>eL Utama
 
 Click **Mulai Playlist Baru**. The extension stores the queue, opens or reuses one dedicated player tab, searches YouTube Music using `title - artist`, selects a matching result, opens the player, and attempts playback.
 
-### 5. Playback controls
+### 5. Advanced playback options
+
+#### Queue Shuffle
+Check **Acak urutan antrean saat memulai** before clicking Mulai Playlist Baru. The queue order is randomized using Fisher-Yates shuffle before saving.
+
+#### Random Listen Duration
+Check **Durasi acak (min–max detik)** and set:
+- **Min:** minimum listen duration (seconds), e.g. `40`
+- **Max:** maximum listen duration (seconds), e.g. `60`
+
+Each track will play for a random duration between Min–Max. When the target is reached, the extension automatically advances to the next track (scrobble is recorded if ≥30 seconds of eligible playback and whitelist passes). Below 30 seconds will not record a scrobble.
+
+### 7. Playback controls
 
 - **Previous:** go to the previous queue item.
 - **Play/Pause:** toggle playback in the player.
@@ -437,11 +471,11 @@ Click **Mulai Playlist Baru**. The extension stores the queue, opens or reuses o
 
 Queue transitions are serialized so rapid clicks do not intentionally skip multiple items.
 
-### 6. History and CSV export
+### 8. History and CSV export
 
 Open **Histori (Scrobble)** to view local history. You can clear history or export it as CSV. CSV fields are quoted, internal quotes are escaped, and timestamps use the local locale format.
 
-### 7. Popup sizes
+### 9. Popup sizes
 
 - **S:** compact layout, approximately 180 px, icon-only tabs.
 - **M:** approximately 220 px.
