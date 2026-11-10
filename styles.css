@@ -91,3 +91,36 @@ li.active-track { color: #00e676; font-weight: bold; }
 
 .history-actions { display: flex; gap: 6px; margin-bottom: 8px; }
 .history-actions button { background: #272727; font-size: 11px; margin: 0; }
+
+.shuffle-row,
+.random-duration { margin: 8px 0; padding: 6px; background: #181818; border: 1px solid #333; border-radius: 6px; font-size: 12px; }
+
+.shuffle-row label,
+.random-duration label { display: flex; align-items: center; margin: 0 0 6px 0; font-size: 12px; color: #f1f1f1; cursor: pointer; }
+.shuffle-row label input,
+.random-duration label input { margin-right: 6px; }
+
+.random-duration .random-inputs { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.random-duration .random-inputs label { display: flex; align-items: center; margin: 0; font-size: 11px; color: #ccc; }
+.random-duration .random-inputs input[type="number"] { width: 60px; padding: 3px 6px; font-size: 12px; background: #0a0a0a; color: #fff; border: 1px solid #333; border-radius: 4px; margin-left: 4px; }
+
+body[data-popup-size="small"] .shuffle-row,
+body[data-popup-size="small"] .random-duration { font-size: 10px; padding: 4px; margin: 6px 0; }
+body[data-popup-size="small"] .shuffle-row label,
+body[data-popup-size="small"] .random-duration label { font-size: 10px; margin: 0 0 3px 0; }
+body[data-popup-size="small"] .shuffle-row label input,
+body[data-popup-size="small"] .random-duration label input { margin-right: 4px; }
+body[data-popup-size="small"] .random-duration .random-inputs { gap: 4px; }
+body[data-popup-size="small"] .random-duration .random-inputs label { font-size: 9px; }
+body[data-popup-size="small"] .random-duration .random-inputs input[type="number"] { width: 44px; padding: 2px 4px; font-size: 10px; margin-left: 2px; }
+
+body[data-popup-size="medium"] .random-duration .random-inputs { gap: 5px; }
+body[data-popup-size="medium"] .random-duration .random-inputs label { font-size: 10px; }
+body[data-popup-size="medium"] .random-duration .random-inputs input[type="number"] { width: 52px; padding: 3px 5px; font-size: 11px; margin-left: 3px; }
+
+body[data-popup-size="large"] .shuffle-row,
+body[data-popup-size="large"] .random-duration { font-size: 13px; padding: 8px; }
+body[data-popup-size="large"] .shuffle-row label,
+body[data-popup-size="large"] .random-duration label { font-size: 13px; margin: 0 0 8px 0; }
+body[data-popup-size="large"] .random-duration .random-inputs { gap: 8px; }
+body[data-popup-size="large"] .random-duration .random-inputs input[type="number"] { width: 90px; font-size: 13px; }

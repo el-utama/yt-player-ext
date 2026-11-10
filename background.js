@@ -60,6 +60,14 @@ async function getOrCreatePlayerTab() {
   return tab;
 }
 
+async function pausePlayer(tabId) {
+  try {
+    await chrome.tabs.sendMessage(tabId, { action: 'PAUSE' });
+  } catch (_error) {
+    // Tab may not have a content script yet; navigation will still proceed.
+  }
+}
+
 async function playTrackAtIndex(index) {
   const data = await storageGet(['queue']);
   const queue = normalizeQueue(data.queue);
@@ -80,6 +88,9 @@ async function playTrackAtIndex(index) {
   });
 
   const tab = await getOrCreatePlayerTab();
+  // Jeda pemutaran sebelum navigasi agar halaman pemain tidak menampilkan
+  // dialog "Anda yakin ingin meninggalkan halaman ini?" saat lagu masih berjalan.
+  await pausePlayer(tab.id);
   await new Promise((resolve) => chrome.tabs.update(tab.id, {
     url: `${PLAYER_ORIGIN}/search?q=${encodeURIComponent(qualifiedSearchQuery(rawQuery))}`,
     active: true

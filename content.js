@@ -7,6 +7,10 @@ const SELECTORS = {
   adMarkers: '.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text'
 };
 
+// Label autoplay / iklan dalam beberapa bahasa agar deteksi tidak hanya mengandalkan Bahasa Indonesia atau Inggris.
+const AUTOPLAY_LABELS = /autoplay|lecture automatique|putar otomatis|reproducción automática|wiedergabe automatisch|riproduzione automatica|reprodução automática|автовоспроизведение|自动播放|自動再生|오토 재생|otomatik oynatma|automatisk uppspelning|automatisk avspilling|automatisk afspilning|automatisch abspielen|เล่นอัตโนมัติ|tự động phát/i;
+const AD_LABELS = /advertisement|ad\s*interrupt|publicité|pub\s*interrupt|anuncio|anuncio\s*interrumpido|werbung|werbeunterbrechung|pubblicità|interruzione\s*pubblicitaria|propaganda|宣伝|広告|광고|재klama|reklame|reklam/i;
+
 const state = {
   monitorTimer: null,
   observer: null,
@@ -22,7 +26,11 @@ const state = {
   lastAdState: false,
   playAttemptedIdentity: '',
   playAttemptedAt: 0,
-  lastDecisionKey: ''
+  lastDecisionKey: '',
+  randomEnabled: false,
+  randomMinSeconds: 0,
+  randomMaxSeconds: 0,
+  randomTargetSeconds: 0
 };
 
 const storageGet = (keys) => new Promise((resolve) => {
@@ -72,7 +80,8 @@ function isAdShowing(video) {
   const marker = document.querySelector(SELECTORS.adMarkers);
   const playerBar = document.querySelector('ytmusic-player-bar');
   const aria = playerBar?.getAttribute('aria-label') || '';
-  return Boolean(marker || /advertisement|ad\s*interrupt/i.test(aria) || video?.classList.contains('ad-showing'));
+  const text = (playerBar?.textContent || '') + ' ' + aria;
+  return Boolean(marker || AD_LABELS.test(text) || video?.classList.contains('ad-showing') || video?.classList.contains('ad-interrupting'));
 }
 
 function normalizeText(value) {
@@ -130,7 +139,7 @@ function scoreSearchResult(text, expectedQuery) {
   };
 }
 
-function resetTrackState(identity, sessionId) {
+function resetTrackState(identity, sessionId, random) {
   if (state.lastTrackIdentity === identity && state.sessionId === sessionId) return;
   state.lastTrackIdentity = identity;
   state.sessionId = sessionId || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -141,18 +150,29 @@ function resetTrackState(identity, sessionId) {
   state.playAttemptedIdentity = '';
   state.playAttemptedAt = 0;
   state.lastDecisionKey = '';
+
+  state.randomEnabled = Boolean(random && random.randomEnabled);
+  state.randomMinSeconds = Number.isFinite(random && random.randomMinSeconds) ? Math.max(0, random.randomMinSeconds) : 0;
+  state.randomMaxSeconds = Number.isFinite(random && random.randomMaxSeconds) ? Math.max(0, random.randomMaxSeconds) : 0;
+  state.randomTargetSeconds = 0;
+  if (state.randomEnabled && state.randomMaxSeconds > 0) {
+    const min = Math.min(state.randomMinSeconds, state.randomMaxSeconds);
+    const max = state.randomMaxSeconds;
+    state.randomTargetSeconds = Math.floor(Math.random() * (max - min + 1)) + min;
+  }
 }
 
 function disableAutoplay() {
   const control = document.querySelector(SELECTORS.autoplay) || [...document.querySelectorAll('button, [role="switch"]')]
     .find((candidate) => {
       const label = `${candidate.getAttribute('aria-label') || ''} ${candidate.textContent || ''}`;
-      return /autoplay|putar otomatis/i.test(label) && candidate.closest('ytmusic-player-bar, ytmusic-player-page, main');
+      return AUTOPLAY_LABELS.test(label) && candidate.closest('ytmusic-player-bar, ytmusic-player-page, main');
     });
   if (!control) return;
   const active = control.getAttribute('aria-pressed') === 'true'
     || control.hasAttribute('active')
-    || /enabled|aktif/i.test(control.textContent || '');
+    || control.getAttribute('aria-checked') === 'true'
+    || /enabled|aktif|activé|activado|activato|ativado|включен|オン|켜짐|på|tændt|aan/i.test(control.textContent || '');
   if (active && typeof control.click === 'function') control.click();
 }
 
@@ -265,9 +285,9 @@ function tick() {
   state.lastTick = now;
 
   const title = getTrackTitle();
-  const storagePromise = storageGet(['currentSessionId']);
-  storagePromise.then(({ currentSessionId }) => {
-    resetTrackState(getTrackIdentity(video, title), currentSessionId);
+  const storagePromise = storageGet(['currentSessionId', 'randomEnabled', 'randomMinSeconds', 'randomMaxSeconds']);
+  storagePromise.then(({ currentSessionId, randomEnabled, randomMinSeconds, randomMaxSeconds }) => {
+    resetTrackState(getTrackIdentity(video, title), currentSessionId, { randomEnabled, randomMinSeconds, randomMaxSeconds });
     tryStartPlayback(video);
   });
 
@@ -282,6 +302,9 @@ function tick() {
 
   if (video.ended && !ad) void advanceAfterDecision();
   if (state.eligibleSeconds >= MIN_SCROBBLE_SECONDS) void maybeScrobble();
+  if (state.randomEnabled && state.randomTargetSeconds > 0 && state.eligibleSeconds >= state.randomTargetSeconds) {
+    void advanceAfterDecision();
+  }
 }
 
 async function selectFirstTrack() {
@@ -374,6 +397,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   } else if (message?.action === 'TRIGGER_SKIP') {
     void advanceAfterDecision().then(() => sendResponse({ ok: true }));
     return true;
+  } else if (message?.action === 'PAUSE') {
+    const video = document.querySelector('video');
+    if (video && !video.paused) {
+      video.pause();
+      reportStatus('paused');
+    }
+    sendResponse({ ok: true });
   } else {
     sendResponse({ ok: false });
   }

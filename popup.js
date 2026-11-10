@@ -10,6 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabPlaylistBtn = $('tabPlaylistBtn');
   const tabHistoryBtn = $('tabHistoryBtn');
   const sizeButtons = [...document.querySelectorAll('.size-btn')];
+  const randomEnable = $('randomEnable');
+  const randomMin = $('randomMin');
+  const randomMax = $('randomMax');
+  const shuffleEnable = $('shuffleEnable');
 
   const storageGet = (keys) => new Promise((resolve) => chrome.storage.local.get(keys, resolve));
   const storageSet = (values) => new Promise((resolve) => chrome.storage.local.set(values, resolve));
@@ -102,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
   tabHistoryBtn.addEventListener('click', () => showTab(true));
 
   startBtn.addEventListener('click', async () => {
-    const tracks = songListInput.value
+    let tracks = songListInput.value
       .split(/\r?\n/)
       .map((track) => track.replace(/\t+/g, ' - ').replace(/\s{2,}/g, ' ').trim())
       .filter(Boolean)
@@ -110,6 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!tracks.length) {
       setStatus('Masukkan minimal satu lagu', true);
       return;
+    }
+    if (shuffleEnable && shuffleEnable.checked) {
+      tracks = shuffleArray(tracks);
     }
     await storageSet({ queue: tracks, currentIndex: 0 });
     const response = await send({ action: 'START_PLAYLIST' });
@@ -146,6 +153,49 @@ document.addEventListener('DOMContentLoaded', () => {
       await storageSet({ popupSize: size });
     });
   });
+  function shuffleArray(array) {
+    const shuffled = array.slice();
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = shuffled[i];
+      shuffled[i] = shuffled[j];
+      shuffled[j] = tmp;
+    }
+    return shuffled;
+  }
+
+  function saveRandomConfig() {
+    if (!randomEnable || !randomMin || !randomMax) return Promise.resolve();
+    return storageSet({
+      randomEnabled: randomEnable.checked,
+      randomMinSeconds: parseInt(randomMin.value, 10) || 0,
+      randomMaxSeconds: parseInt(randomMax.value, 10) || 0
+    });
+  }
+
+  if (randomEnable && randomMin && randomMax) {
+    [randomEnable, randomMin, randomMax].forEach((el) => {
+      el.addEventListener('change', () => void saveRandomConfig());
+    });
+  }
+
+  function saveShuffleConfig() {
+    if (!shuffleEnable) return Promise.resolve();
+    return storageSet({ shuffleEnabled: shuffleEnable.checked });
+  }
+
+  if (shuffleEnable) {
+    shuffleEnable.addEventListener('change', () => void saveShuffleConfig());
+  }
+
   void storageGet(['popupSize']).then(({ popupSize }) => applyPopupSize(popupSize));
+  void storageGet(['randomEnabled', 'randomMinSeconds', 'randomMaxSeconds']).then(({ randomEnabled, randomMinSeconds, randomMaxSeconds }) => {
+    if (randomEnable) randomEnable.checked = Boolean(randomEnabled);
+    if (randomMin) randomMin.value = Number.isFinite(randomMinSeconds) ? randomMinSeconds : '';
+    if (randomMax) randomMax.value = Number.isFinite(randomMaxSeconds) ? randomMaxSeconds : '';
+  });
+  void storageGet(['shuffleEnabled']).then(({ shuffleEnabled }) => {
+    if (shuffleEnable) shuffleEnable.checked = Boolean(shuffleEnabled);
+  });
   void refreshQueueUI();
 });

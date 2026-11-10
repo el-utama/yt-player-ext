@@ -28,6 +28,20 @@
     <textarea id="songList" maxlength="20000" placeholder="Demons - Jacob Lee&#10;Gamelan Reggae - eL Utama"></textarea>
     <button id="startBtn" type="button">▶ Mulai Playlist Baru</button>
 
+    <div class="shuffle-row" aria-label="Acak antrean">
+      <label><input id="shuffleEnable" type="checkbox"> Acak urutan antrean saat memulai</label>
+    </div>
+
+    <div class="random-duration" aria-label="Durasi acak">
+      <label><input id="randomEnable" type="checkbox"> Durasi acak (min–max detik)</label>
+      <div class="random-inputs">
+        <label for="randomMin">Min</label>
+        <input id="randomMin" type="number" min="0" placeholder="40" title="Durasi minimal menonton (detik)">
+        <label for="randomMax">Max</label>
+        <input id="randomMax" type="number" min="0" placeholder="60" title="Durasi maksimal menonton (detik)">
+      </div>
+    </div>
+
     <div class="player-controls" aria-label="Kontrol pemutaran">
       <button id="prevBtn" type="button" title="Sebelumnya">⏮</button>
       <button id="togglePlayBtn" type="button" title="Play / Pause">⏯</button>
