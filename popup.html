@@ -51,6 +51,16 @@
       </div>
     </div>
 
+    <div class="ad-skip" aria-label="Skip iklan otomatis">
+      <label><input id="adSkipEnable" type="checkbox"> Skip iklan otomatis</label>
+      <div class="ad-skip-inputs">
+        <label for="adSkipMinDelay">Min delay (ms)</label>
+        <input id="adSkipMinDelay" type="number" min="0" placeholder="5000" title="Delay minimal sebelum coba skip (ms)">
+        <label for="adSkipMaxWait">Max wait (ms)</label>
+        <input id="adSkipMaxWait" type="number" min="0" placeholder="30000" title="Maksimal tunggu sebelum force skip (ms)">
+      </div>
+    </div>
+
     <div class="player-controls" aria-label="Kontrol pemutaran">
       <button id="prevBtn" type="button" title="Sebelumnya">⏮</button>
       <button id="togglePlayBtn" type="button" title="Play / Pause">⏯</button>
