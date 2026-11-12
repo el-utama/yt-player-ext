@@ -26,6 +26,8 @@ Dokumen ini menjelaskan cara memasang ekstensi secara lokal menggunakan **Load u
    - Popup tersedia ketika ikon ekstensi diklik.
 7. Jika sebelumnya versi lama terpasang, gunakan **Reload** setelah setiap perubahan file. Bila service worker tampak macet, klik **Remove**, lalu Load unpacked kembali.
 
+> File `background.js`, `content.js`, dan `popup.js` adalah hasil build dan sudah tersedia di repository. Jika mengubah file di `src/`, jalankan `npm install` lalu `npm run build` sebelum menekan **Reload**.
+
 ### Memeriksa error instalasi
 
 Pada kartu ekstensi, klik **Errors**. Error pada `manifest.json`, `background.js`, atau `content.js` harus diperbaiki sebelum pengujian playback. Klik **Service worker** pada halaman detail untuk membuka DevTools service worker dan melihat log background.
@@ -175,7 +177,15 @@ Popup juga menampilkan status diagnostik seperti `player_ready`, `play_requested
 2. Tekan **Previous** atau **Next** saat lagu berjalan.
 3. Amati apakah browser menampilkan dialog "Anda yakin ingin meninggalkan halaman ini?".
 
-**Expected:** tidak ada dialog konfirmasi karena extension mengirim `PAUSE` ke content script sebelum navigasi tab.
+**Expected:** tidak ada dialog konfirmasi karena extension menjeda video melalui `chrome.scripting.executeScript` (dengan fallback pesan `PAUSE`) sebelum navigasi tab.
+
+### E2E-04a — Next setelah service worker restart
+
+1. Mulai playlist dan pastikan lagu berjalan.
+2. Buka `chrome://extensions` → **Service worker**, lalu biarkan service worker idle sampai Chrome menghentikannya (±1 menit).
+3. Klik **Next** di popup.
+
+**Expected:** lagu berpindah ke item berikutnya tanpa perlu reload extension. Jika tidak ada tab YouTube Music, popup menampilkan `Skip gagal: no-player-tab`.
 
 ### E2E-05 — Continuous scrobble threshold
 

@@ -29,6 +29,7 @@ Extension ini menyediakan:
 - Perlindungan whitelist agar lagu dari artis atau judul yang tidak sesuai tidak dicatat.
 - Penahanan timer ketika iklan terdeteksi.
 - **Durasi acak per lagu** (Min–Max detik) dengan advance otomatis.
+- **Skip iklan otomatis** dengan jeda minimal dan batas tunggu yang dapat diatur.
 - **Acak urutan antrean** (shuffle) saat memulai playlist.
 - Histori lokal dan ekspor CSV.
 - Popup dengan tiga ukuran: S, M, dan L (layout responsif).
@@ -73,6 +74,17 @@ Extension ini ditujukan untuk penggunaan pribadi pada `https://music.youtube.com
 8. Tutup tab YouTube Music lama dan buka tab baru agar content script versi terbaru dimuat.
 
 > Setelah reload extension, tab YouTube Music yang sudah terbuka dapat masih memakai content script lama. Hard reload dengan `Ctrl+Shift+R`, atau tutup dan buka kembali tab tersebut.
+
+### Build dari source
+
+File `background.js`, `content.js`, dan `popup.js` adalah hasil build dan sudah disertakan di repository, sehingga side-load langsung dapat dilakukan. Jika mengubah file di `src/`, jalankan:
+
+```powershell
+npm install
+npm run build
+```
+
+Lalu klik **Reload** pada kartu extension. Gunakan `npm run build:dev` untuk build tanpa minifikasi dan `npm run dev` untuk watch mode.
 
 ## Cara Penggunaan
 
@@ -136,6 +148,15 @@ Centang **Durasi acak (min–max detik)** dan isi:
 - **Max:** durasi maksimal menonton (detik), mis. `60`
 
 Setiap lagu akan diputar selama durasi acak antara Min–Max. Jika durasi tercapai, extension otomatis pindah ke lagu berikutnya (scrobble dicatat jika ≥30 detik eligible playback dan lolos whitelist). Di bawah 30 detik tidak akan mencatat scrobble.
+
+### 5a. Skip iklan otomatis
+
+Centang **Skip iklan otomatis** dan atur:
+
+- **Min delay (ms):** jeda sebelum extension mulai menekan tombol skip, default `5000`.
+- **Max wait (ms):** batas tunggu sebelum upaya skip dipaksa, default `30000`.
+
+Extension hanya menekan tombol **Skip Ad** yang disediakan YouTube Music. Iklan tanpa tombol skip tidak dapat dilewati. Waktu iklan tidak dihitung sebagai eligible scrobble time, dan pengaturan disimpan di `chrome.storage.local`.
 
 ### 6. Kontrol playback
 
@@ -205,6 +226,8 @@ Status di popup membantu mencari sumber masalah:
 | `scrobbled` | Scrobble berhasil disimpan. |
 | `scrobble_paused` | Scrobble ditahan, biasanya karena iklan aktif. |
 | `scrobble_rejected` | Payload atau whitelist tidak memenuhi syarat. |
+| `ad_skip_attempted` | Tombol skip iklan berhasil ditekan. |
+| `ad_skip_forced` | Upaya skip dipaksa setelah melewati batas tunggu. |
 | `Extension context invalidated` | Tab masih memakai content script lama setelah extension di-reload. |
 
 ## Troubleshooting
@@ -291,13 +314,18 @@ Solusi:
 
 ## Pengujian Lokal
 
-Automated regression test untuk switch global dan badge dapat dijalankan tanpa instalasi dependency tambahan:
-
 ```powershell
-node --test tests/extension-toggle.test.js
+npm test
 ```
 
-Test memverifikasi versi Manifest, markup switch, persistence `extensionEnabled`, guard content/service worker, serta kontrak badge `OFF`.
+Test regresi memverifikasi versi Manifest, markup dan ID kontrol popup, persistence `extensionEnabled`, guard content/service worker, kontrak badge `OFF`, sinkronisasi player tab setelah service worker restart, serta pelaporan kegagalan tombol Next.
+
+Build production dan development:
+
+```powershell
+npm run build
+npm run build:dev
+```
 
 Dokumentasi pengujian lebih rinci tersedia di:
 
@@ -323,11 +351,19 @@ Jangan menyimpan credential atau profile Chrome pribadi ke repository.
 ```text
 .
 ├── manifest.json                 # Manifest V3
-├── background.js                 # Service worker, queue, dedicated tab, storage
-├── content.js                    # Search selection, player, autoplay, ad gate, scrobble
+├── background.js                 # Hasil build service worker
+├── content.js                    # Hasil build content script
+├── popup.js                      # Hasil build popup
 ├── popup.html                    # Markup popup
-├── popup.js                      # UI, queue, history, CSV, size preference
 ├── styles.css                    # Tema dan layout popup S/M/L
+├── esbuild.config.mjs            # Konfigurasi build esbuild
+├── src/
+│   ├── shared/                   # constants, utils, messaging
+│   ├── background/               # bootstrap, queue, tab-manager, scrobble, badge
+│   ├── content/                  # search, player, ad-skip, scrobble, navigation
+│   └── popup/                    # queue-ui, history-ui, settings, ui
+├── tests/
+│   └── extension-toggle.test.js  # Regression test
 ├── scripts/
 │   └── ytmusic-dom-audit.js      # Audit selector Puppeteer
 ├── INSTALL_AND_TESTING.md        # Panduan side-load dan E2E
@@ -358,7 +394,8 @@ Extension ini tidak menggunakan YouTube Data API dan tidak mengirim histori ke s
 - Iklan dapat menunda playback dan tidak dihitung sebagai eligible scrobble time.
 - Popup Chrome memiliki keterbatasan ukuran minimum dan dapat mempertahankan ukuran container sampai popup dibuka ulang.
 - Scrobble hanya lokal; tidak terhubung ke Last.fm, ListenBrainz, atau layanan eksternal lain.
-- Service worker Manifest V3 dapat dihentikan Chrome ketika idle. State penting disimpan ke `chrome.storage.local`, tetapi pengujian harus mencakup restart service worker.
+- Skip iklan hanya bekerja jika YouTube Music menyediakan tombol **Skip Ad**; iklan unskippable tidak dapat dilewati.
+- Service worker Manifest V3 dapat dihentikan Chrome ketika idle. Extension menyelaraskan ulang tab player setiap service worker aktif kembali, tetapi pengujian restart tetap disarankan.
 
 ## Lisensi
 
@@ -386,6 +423,7 @@ It provides:
 - Whitelist protection against recording unrelated titles or artists.
 - Ad-aware timing and navigation.
 - **Random listen duration per track** (Min–Max seconds) with auto-advance.
+- **Automatic ad skip** with configurable minimum delay and maximum wait.
 - **Queue shuffle** (Fisher-Yates) on playlist start.
 - Local history and CSV export.
 - S, M, and L popup layouts (responsive).
@@ -430,6 +468,17 @@ The extension is intended for personal use on `https://music.youtube.com`.
 8. Close old YouTube Music tabs and open a new one so the latest content script is loaded.
 
 > Reloading an extension does not always replace the content script already running in an open tab. Use `Ctrl+Shift+R`, or close and reopen the YouTube Music tab.
+
+### Building from source
+
+`background.js`, `content.js`, and `popup.js` are build artifacts and are committed to the repository, so side-loading works immediately. If you change anything under `src/`, run:
+
+```powershell
+npm install
+npm run build
+```
+
+Then click **Reload** on the extension card. Use `npm run build:dev` for an unminified build and `npm run dev` for watch mode.
 
 ## Usage
 
@@ -486,6 +535,15 @@ Check **Durasi acak (min–max detik)** and set:
 - **Max:** maximum listen duration (seconds), e.g. `60`
 
 Each track will play for a random duration between Min–Max. When the target is reached, the extension automatically advances to the next track (scrobble is recorded if ≥30 seconds of eligible playback and whitelist passes). Below 30 seconds will not record a scrobble.
+
+### 6. Automatic ad skip
+
+Check **Skip iklan otomatis** and configure:
+
+- **Min delay (ms):** how long to wait before the skip button is pressed, default `5000`.
+- **Max wait (ms):** how long to wait before a forced skip attempt, default `30000`.
+
+The extension only clicks the **Skip Ad** button provided by YouTube Music. Unskippable ads cannot be bypassed. Ad time never counts as eligible scrobble time, and the settings are stored in `chrome.storage.local`.
 
 ### 7. Playback controls
 
@@ -548,6 +606,8 @@ When Next is pressed after the threshold and whitelist checks pass, the extensio
 | `scrobbled` | The scrobble was saved locally. |
 | `scrobble_paused` | Scrobbling is paused, usually because an ad is active. |
 | `scrobble_rejected` | The whitelist or payload validation failed. |
+| `ad_skip_attempted` | The ad skip button was clicked. |
+| `ad_skip_forced` | A forced skip was attempted after the maximum wait. |
 | `Extension context invalidated` | The tab still contains an old content script after an extension reload. |
 
 ## Troubleshooting
@@ -597,13 +657,20 @@ See:
 - [`INSTALL_AND_TESTING.md`](INSTALL_AND_TESTING.md)
 - [`PUPPETEER_DOM_AUDIT.md`](PUPPETEER_DOM_AUDIT.md)
 
-Automated regression test for the extension toggle and badge can be run without additional dependencies:
+Automated regression tests:
 
 ```powershell
-node --test tests/extension-toggle.test.js
+npm test
 ```
 
-Test verifies Manifest version, toggle markup, `extensionEnabled` persistence, content/service worker guards, and `OFF` badge contract.
+The tests verify the Manifest version, popup control markup and element IDs, `extensionEnabled` persistence, content/service worker guards, the `OFF` badge contract, player tab reconciliation after a service worker restart, and Next button failure reporting.
+
+Build commands:
+
+```powershell
+npm run build
+npm run build:dev
+```
 
 The Puppeteer DOM audit script is located at:
 
@@ -624,11 +691,19 @@ Do not commit personal Chrome credentials or profiles.
 ```text
 .
 ├── manifest.json                 # Manifest V3
-├── background.js                 # Service worker, queue, tab routing, storage
-├── content.js                    # Search, player, autoplay, ads, scrobbling
+├── background.js                 # Built service worker
+├── content.js                    # Built content script
+├── popup.js                      # Built popup script
 ├── popup.html                    # Popup markup
-├── popup.js                      # UI, queue, history, CSV, size preference
 ├── styles.css                    # S/M/L popup layout and theme
+├── esbuild.config.mjs            # esbuild build configuration
+├── src/
+│   ├── shared/                   # constants, utils, messaging
+│   ├── background/               # bootstrap, queue, tab-manager, scrobble, badge
+│   ├── content/                  # search, player, ad-skip, scrobble, navigation
+│   └── popup/                    # queue-ui, history-ui, settings, ui
+├── tests/
+│   └── extension-toggle.test.js  # Regression tests
 ├── scripts/
 │   └── ytmusic-dom-audit.js      # Puppeteer selector audit
 ├── INSTALL_AND_TESTING.md        # Side-load and E2E guide
@@ -659,7 +734,8 @@ The extension does not use the YouTube Data API and does not send scrobble histo
 - Ads may delay playback and never count toward eligible scrobble time.
 - Chrome action popups have minimum-size and lifecycle behavior; close/reopen the popup after changing size modes.
 - Scrobble history is local only and is not synchronized with Last.fm, ListenBrainz, or another external service.
-- Manifest V3 service workers may be suspended while idle. Important state is persisted, but service-worker restart should be included in testing.
+- Ad skipping only works when YouTube Music exposes a **Skip Ad** button; unskippable ads cannot be bypassed.
+- Manifest V3 service workers may be suspended while idle. The extension reconciles the player tab whenever the worker wakes up, but service-worker restart should still be included in testing.
 
 ## License
 
