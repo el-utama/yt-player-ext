@@ -509,7 +509,7 @@ This lets a playlist played directly from YouTube Music run without extension in
 
 Open **Histori (Scrobble)** to view local history. You can clear history or export it as CSV. CSV fields are quoted, internal quotes are escaped, and timestamps use the local locale format.
 
-### 9. Popup sizes
+### 10. Popup sizes
 
 - **S:** compact layout, approximately 180 px, icon-only tabs.
 - **M:** approximately 220 px.
