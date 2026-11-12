@@ -5,9 +5,37 @@ import { findPlayControl, getTrackTitle, isAdShowing } from './dom.js';
 import { reportStatus } from '../shared/messaging.js';
 import { storageGet } from './storage.js';
 import { resetTrackState, MIN_SCROBBLE_SECONDS } from './state.js';
-import { getTrackIdentity } from '../shared/utils.js';
+import { getTrackIdentity, isWhitelisted } from '../shared/utils.js';
 import { advanceAfterDecision, maybeScrobble } from './scrobble.js';
 import { checkAndSkipAd } from './ad-skip.js';
+
+/**
+ * Detect YouTube Music native autoplay takeover.
+ *
+ * YouTube can replace the media source before the `ended` event fires, so the
+ * queue would silently continue into an auto-generated radio (`list=RD...`)
+ * instead of the extension queue. When that happens, hand control back to the
+ * extension.
+ */
+export function enforceQueueOwnership(title, expectedQuery) {
+  const urlKey = `${window.location.pathname}${window.location.search}`;
+  if (state.lastPlayerUrl !== urlKey) {
+    state.lastPlayerUrl = urlKey;
+    state.nativeTakeoverHandled = false;
+  }
+
+  if (!window.location.pathname.includes('/watch')) return;
+  if (state.advancing || state.nativeTakeoverHandled) return;
+  if (!expectedQuery || !title) return;
+  // Radio playlists (`list=RD...`) are created by YouTube's own autoplay, not
+  // by the extension (which always navigates to a plain /watch?v= page).
+  if (!/[?&]list=RD/.test(window.location.search)) return;
+  if (isWhitelisted(title, expectedQuery)) return;
+
+  state.nativeTakeoverHandled = true;
+  reportStatus('native_autoplay_detected', title);
+  void advanceAfterDecision();
+}
 
 /**
  * Bind video element and set up event listeners
@@ -91,14 +119,15 @@ export function tick() {
   const title = getTrackTitle();
   
   // Update track state from storage
-  storageGet(['currentSessionId', 'randomEnabled', 'randomMinSeconds', 'randomMaxSeconds'])
-    .then(({ currentSessionId, randomEnabled, randomMinSeconds, randomMaxSeconds }) => {
+  storageGet(['currentSessionId', 'currentExpectedQuery', 'randomEnabled', 'randomMinSeconds', 'randomMaxSeconds'])
+    .then(({ currentSessionId, currentExpectedQuery, randomEnabled, randomMinSeconds, randomMaxSeconds }) => {
       resetTrackState(
         getTrackIdentity(video, title), 
         currentSessionId, 
         { randomEnabled, randomMinSeconds, randomMaxSeconds }
       );
       tryStartPlayback(video);
+      enforceQueueOwnership(title, currentExpectedQuery);
     });
   
   // Ad detection

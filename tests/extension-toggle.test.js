@@ -25,6 +25,8 @@ const backgroundStorage = read('src/background/storage.js');
 const backgroundMessaging = read('src/background/messaging.js');
 const backgroundQueue = read('src/background/queue.js');
 const backgroundBootstrap = read('src/background/bootstrap.js');
+const contentScrobble = read('src/content/scrobble.js');
+const contentNavigation = read('src/content/navigation.js');
 
 function extensionEnabled(storage) {
   return storage.extensionEnabled !== false;
@@ -121,6 +123,53 @@ test('search selection and autoplay controls are fail-closed', () => {
   assert.match(contentPlayer, /findPlayControl/);
   assert.match(contentDom, /role="button"/);
   assert.match(contentPlayer, /play_control_not_found/);
+});
+
+test('native autoplay takeover is detected and handed back to the queue', async () => {
+  assert.match(contentPlayer, /export function enforceQueueOwnership/);
+  assert.match(contentPlayer, /\/\[\?&\]list=RD\//);
+  assert.match(contentPlayer, /native_autoplay_detected/);
+  assert.match(contentPlayer, /getTrackIdentity, isWhitelisted/);
+  assert.match(contentScrobble, /A scrobble failure must never block queue advancement/);
+
+  // Behavioural check: a radio URL playing an unexpected track must trigger.
+  const { state } = await import('../src/content/state.js');
+  const { enforceQueueOwnership } = await import('../src/content/player.js');
+  const realWindow = globalThis.window;
+  const { isWhitelisted } = await import('../src/shared/utils.js');
+
+  globalThis.window = { location: { pathname: '/watch', search: '?v=abc&list=RDAMVMabc' } };
+  state.enabled = false;
+  state.advancing = false;
+  state.nativeTakeoverHandled = false;
+  state.lastPlayerUrl = '';
+
+  // The queue expects a different track, so the radio must be overridden.
+  assert.equal(isWhitelisted('Somebody To Love', 'Bohemian Rhapsody - Queen'), false);
+  enforceQueueOwnership('Somebody To Love', 'Bohemian Rhapsody - Queen');
+  assert.equal(state.nativeTakeoverHandled, true);
+
+  // A matching track and a non-radio URL must not trigger an advance.
+  state.nativeTakeoverHandled = false;
+  state.lastPlayerUrl = '';
+  enforceQueueOwnership('Bohemian Rhapsody', 'Bohemian Rhapsody - Queen');
+  assert.equal(state.nativeTakeoverHandled, false);
+
+  globalThis.window = { location: { pathname: '/watch', search: '?v=abc' } };
+  state.lastPlayerUrl = '';
+  enforceQueueOwnership('Somebody To Love', 'Bohemian Rhapsody - Queen');
+  assert.equal(state.nativeTakeoverHandled, false);
+
+  globalThis.window = realWindow;
+});
+
+test('search selection survives duplicate navigation events', () => {
+  assert.doesNotMatch(contentSearch, /navigationToken/);
+  assert.match(contentSearch, /state\.selectInterval = interval/);
+  assert.match(contentSearch, /duplicate `yt-navigate-finish` event must not cancel selection/);
+  assert.doesNotMatch(contentNavigation, /navigationToken/);
+  assert.doesNotMatch(contentState, /navigationToken/);
+  assert.match(contentNavigation, /clearInterval\(state\.selectInterval\)/);
 });
 
 console.log('Extension toggle regression tests loaded. Run with: node --test tests/extension-toggle.test.js');

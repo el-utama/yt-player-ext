@@ -22,6 +22,7 @@ Extension ini menyediakan:
 - Pencarian organik melalui halaman YouTube Music, tanpa YouTube Data API.
 - Pemilihan hasil berdasarkan kecocokan judul dan artis.
 - Autoplay melalui player native YouTube Music dengan retry terbatas.
+- **Pemulihan antrean saat YouTube Music memulai radio otomatis** setelah lagu selesai.
 - **Deteksi autoplay dan iklan multibahasa** (ID, EN, FR, DE, ES, IT, PT, RU, JA, KO, TH, TR, dll.).
 - **Pause otomatis sebelum navigasi** agar tidak muncul dialog "meninggalkan halaman" saat Previous/Next.
 - Tombol Play/Pause, Next, dan Previous dari popup.
@@ -228,6 +229,7 @@ Status di popup membantu mencari sumber masalah:
 | `scrobble_rejected` | Payload atau whitelist tidak memenuhi syarat. |
 | `ad_skip_attempted` | Tombol skip iklan berhasil ditekan. |
 | `ad_skip_forced` | Upaya skip dipaksa setelah melewati batas tunggu. |
+| `native_autoplay_detected` | YouTube Music memulai radio otomatis; extension mengambil alih dan memajukan antrean. |
 | `Extension context invalidated` | Tab masih memakai content script lama setelah extension di-reload. |
 
 ## Troubleshooting
@@ -274,6 +276,15 @@ Periksa hal berikut:
 
 Chrome dapat membatasi autoplay audio yang dimulai tanpa interaksi pengguna. Extension mencoba tombol play native YouTube Music dan `HTMLMediaElement.play()`, tetapi tidak dapat menjamin bahwa kebijakan autoplay Chrome selalu mengizinkan audio.
 
+### Setelah lagu selesai, yang diputar lagu dari radio/pencarian, bukan item antrean
+
+YouTube Music dapat mengganti sumber video sebelum event `ended` sempat terkirim, lalu melanjutkan ke radio otomatis (`list=RD...`). Extension mendeteksi pengambilalihan ini dan mengembalikan playback ke antrean. Jika masih terjadi:
+
+1. Periksa status popup: `native_autoplay_detected` berarti pengambilalihan terdeteksi dan antrean dimajukan.
+2. Pastikan queue masih memiliki item berikutnya (status `idle` berarti antrean sudah habis).
+3. Tunggu 1–2 detik; extension memeriksa pengambilalihan setiap 500 ms.
+4. Reload extension dan tab YouTube Music jika content script lama masih aktif.
+
 ### Next atau Previous tidak berpindah sesuai queue
 
 1. Pastikan hanya satu dedicated player tab yang digunakan.
@@ -318,7 +329,7 @@ Solusi:
 npm test
 ```
 
-Test regresi memverifikasi versi Manifest, markup dan ID kontrol popup, persistence `extensionEnabled`, guard content/service worker, kontrak badge `OFF`, sinkronisasi player tab setelah service worker restart, serta pelaporan kegagalan tombol Next.
+Test regresi memverifikasi versi Manifest, markup dan ID kontrol popup, persistence `extensionEnabled`, guard content/service worker, kontrak badge `OFF`, sinkronisasi player tab setelah service worker restart, pelaporan kegagalan tombol Next, serta deteksi pengambilalihan autoplay native.
 
 Build production dan development:
 
@@ -416,6 +427,7 @@ It provides:
 - Organic navigation through YouTube Music search pages without the YouTube Data API.
 - Result selection based on title and artist matching.
 - Native YouTube Music playback attempts with bounded retries.
+- **Queue recovery when YouTube Music starts an automatic radio** after a track ends.
 - **Multilingual autoplay/ad detection** (ID, EN, FR, DE, ES, IT, PT, RU, JA, KO, TH, TR, etc.).
 - **Auto-pause before navigation** to prevent "leave page" dialogs on Previous/Next.
 - Popup Play/Pause, Next, and Previous controls.
@@ -608,6 +620,7 @@ When Next is pressed after the threshold and whitelist checks pass, the extensio
 | `scrobble_rejected` | The whitelist or payload validation failed. |
 | `ad_skip_attempted` | The ad skip button was clicked. |
 | `ad_skip_forced` | A forced skip was attempted after the maximum wait. |
+| `native_autoplay_detected` | YouTube Music started an automatic radio; the extension reclaimed control and advanced the queue. |
 | `Extension context invalidated` | The tab still contains an old content script after an extension reload. |
 
 ## Troubleshooting
@@ -633,6 +646,15 @@ If no matching artist is available, the extension should show `search_no_exact_m
 Confirm that the URL changes from `/search` to `/watch?v=...`. Check for `player_ready`, `play_requested`, and `playing`. If the status is `autoplay_blocked`, click Play/Pause once to provide a browser user gesture. Also check mute settings and wait for any active ad to finish.
 
 Browser autoplay policy can prevent audio playback initiated without a user gesture. The extension cannot override that policy.
+
+### After a track ends, YouTube's radio or search song plays instead of the next queue item
+
+YouTube Music can replace the media source before the `ended` event is dispatched, then continue into an automatic radio (`list=RD...`). The extension detects that takeover and hands playback back to the queue. If it still happens:
+
+1. Check the popup status: `native_autoplay_detected` means the takeover was detected and the queue advanced.
+2. Make sure the queue still has a next item (an `idle` status means the queue is finished).
+3. Wait 1–2 seconds; the extension checks for takeover every 500 ms.
+4. Reload the extension and the YouTube Music tab if an old content script is still active.
 
 ### Next or Previous selects the wrong item
 
@@ -663,7 +685,7 @@ Automated regression tests:
 npm test
 ```
 
-The tests verify the Manifest version, popup control markup and element IDs, `extensionEnabled` persistence, content/service worker guards, the `OFF` badge contract, player tab reconciliation after a service worker restart, and Next button failure reporting.
+The tests verify the Manifest version, popup control markup and element IDs, `extensionEnabled` persistence, content/service worker guards, the `OFF` badge contract, player tab reconciliation after a service worker restart, Next button failure reporting, and native autoplay takeover detection.
 
 Build commands:
 

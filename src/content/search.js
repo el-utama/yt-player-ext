@@ -18,14 +18,17 @@ export async function selectFirstTrack() {
   const expectedQuery = currentExpectedQuery || '';
   
   reportStatus('search_selecting', expectedQuery);
-  const token = ++state.navigationToken;
   let attempts = 0;
+  if (state.selectInterval) clearInterval(state.selectInterval);
   
   const interval = setInterval(() => {
     attempts += 1;
     
-    if (!state.enabled || token !== state.navigationToken || !window.location.pathname.includes('/search')) {
+    // Only abort when the extension is disabled or we already left the search
+    // page. A duplicate `yt-navigate-finish` event must not cancel selection.
+    if (!state.enabled || !window.location.pathname.includes('/search')) {
       clearInterval(interval);
+      state.selectInterval = null;
       state.selecting = false;
       return;
     }
@@ -40,7 +43,7 @@ export async function selectFirstTrack() {
           button.textContent
         ].filter(Boolean).join(' ');
         
-        return /play|putar|reproduc|wiedergabe|riprodu|播放|再生|재생/i.test(label)
+        return /play|putar|reproduc|wiedergabe|riprodu|æ’­æ”¾|å†ç”Ÿ|ìž¬ìƒ/i.test(label)
           && !/next|previous|save|queue|volume|mute|shuffle|repeat/i.test(label)
           && button.offsetParent !== null;
       }),
@@ -63,7 +66,7 @@ export async function selectFirstTrack() {
         
         const playButton = isAnchor
           ? [...container.querySelectorAll('button, [role="button"]')].find((button) => 
-              /play|putar|reproduc|wiedergabe|riprodu|播放|再生|재생/i.test([
+              /play|putar|reproduc|wiedergabe|riprodu|æ’­æ”¾|å†ç”Ÿ|ìž¬ìƒ/i.test([
                 button.getAttribute('aria-label'),
                 button.getAttribute('title'),
                 button.textContent,
@@ -94,6 +97,7 @@ export async function selectFirstTrack() {
     
     if (best && attempts >= 4) {
       clearInterval(interval);
+      state.selectInterval = null;
       state.selecting = false;
       reportStatus(
         'search_selected', 
@@ -106,8 +110,10 @@ export async function selectFirstTrack() {
       }
     } else if (attempts >= 30) {
       clearInterval(interval);
+      state.selectInterval = null;
       state.selecting = false;
       reportStatus('search_no_exact_match', expectedQuery);
     }
   }, 400);
+  state.selectInterval = interval;
 }

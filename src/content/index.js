@@ -24,6 +24,10 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName !== 'local' || !changes.extensionEnabled) return;
   state.enabled = changes.extensionEnabled.newValue !== false;
   if (!state.enabled) {
+    if (state.selectInterval) {
+      clearInterval(state.selectInterval);
+      state.selectInterval = null;
+    }
     state.selecting = false;
     state.advancing = false;
     state.eligibleSeconds = 0;

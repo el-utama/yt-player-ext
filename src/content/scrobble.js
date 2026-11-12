@@ -69,7 +69,12 @@ export async function advanceAfterDecision() {
   
   state.advancing = true;
   try {
-    await maybeScrobble();
+    // A scrobble failure must never block queue advancement.
+    try {
+      await maybeScrobble();
+    } catch (error) {
+      reportStatus('scrobble_error', String(error));
+    }
     if (state.enabled) await sendMessage({ action: 'NEXT_TRACK' });
   } finally {
     state.advancing = false;

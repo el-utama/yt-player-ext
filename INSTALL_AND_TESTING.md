@@ -160,6 +160,14 @@ Popup juga menampilkan status diagnostik seperti `player_ready`, `play_requested
 
 **Expected:** autoplay dimatikan ketika kontrol tersedia dan aktif. Tidak ada navigasi otomatis ke rekomendasi setelah track selesai selain progression queue ekstensi.
 
+### E2E-03b — Youtube radio mengambil alih setelah track selesai
+
+1. Mulai playlist dengan minimal dua item.
+2. Tunggu sampai lagu pertama berjalan, lalu biarkan selesai (atau seek ke 2 detik terakhir).
+3. Amati URL dan judul yang diputar setelah lagu selesai.
+
+**Expected:** YouTube Music mungkin sempat membuka radio otomatis (`list=RD...`), tetapi dalam ±1–2 detik extension mendeteksi pengambilalihan (`native_autoplay_detected`) dan memutar item antrean berikutnya. `currentIndex` harus bertambah dan popup menampilkan judul item berikutnya.
+
 ### E2E-03a — Switch extension aktif/nonaktif
 
 1. Buka popup dan pastikan switch **Kontrol ekstensi** dalam keadaan **Aktif**.

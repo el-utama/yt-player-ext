@@ -15,7 +15,9 @@ export const state = {
   scrobbled: false,
   advancing: false,
   selecting: false,
-  navigationToken: 0,
+  selectInterval: null,
+  lastPlayerUrl: '',
+  nativeTakeoverHandled: false,
   lastAdState: false,
   playAttemptedIdentity: '',
   playAttemptedAt: 0,
@@ -42,7 +44,6 @@ export function resetTrackState(identity, sessionId, randomConfig = {}) {
   state.eligibleSeconds = 0;
   state.lastTick = performance.now();
   state.scrobbled = false;
-  state.advancing = false;
   state.playAttemptedIdentity = '';
   state.playAttemptedAt = 0;
   state.lastDecisionKey = '';
@@ -75,6 +76,10 @@ export function setEnabled(enabled) {
     state.selecting = false;
     state.advancing = false;
     state.eligibleSeconds = 0;
+    if (state.selectInterval) {
+      clearInterval(state.selectInterval);
+      state.selectInterval = null;
+    }
   }
 }
 

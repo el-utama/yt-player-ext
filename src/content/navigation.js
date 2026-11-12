@@ -10,19 +10,27 @@ import { reportStatus } from '../shared/messaging.js';
  * Handle yt-navigate-finish event
  */
 export async function handleNavigation() {
-  state.navigationToken += 1;
-  
   const enabledState = await storageGet(['extensionEnabled']);
   state.enabled = enabledState.extensionEnabled !== false;
   
   if (!state.enabled) {
-    state.navigationToken += 1;
+    if (state.selectInterval) {
+      clearInterval(state.selectInterval);
+      state.selectInterval = null;
+    }
     state.selecting = false;
     state.advancing = false;
     reportStatus('disabled', 'Ekstensi nonaktif');
     return;
   }
-  
+
+  // Stop a stale selection loop once we leave the search page.
+  if (!window.location.pathname.includes('/search') && state.selectInterval) {
+    clearInterval(state.selectInterval);
+    state.selectInterval = null;
+    state.selecting = false;
+  }
+
   disableAutoplay();
   
   const data = await storageGet(['autoSelectNeeded']);
