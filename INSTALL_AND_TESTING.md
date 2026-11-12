@@ -21,7 +21,7 @@ Dokumen ini menjelaskan cara memasang ekstensi secara lokal menggunakan **Load u
 
 5. Pastikan kartu ekstensi **YT Music Custom Player & Whitelist Scrobbler** muncul tanpa pesan error.
 6. Klik **Details** dan verifikasi:
-   - Extension version: `3.2.6`.
+   - Extension version: `3.2.7`.
    - Site access hanya untuk `music.youtube.com`.
    - Popup tersedia ketika ikon ekstensi diklik.
 7. Jika sebelumnya versi lama terpasang, gunakan **Reload** setelah setiap perubahan file. Bila service worker tampak macet, klik **Remove**, lalu Load unpacked kembali.
@@ -111,6 +111,16 @@ Jangan langsung mengganti selector hanya berdasarkan satu sesi. Ambil sampel saa
 
 ## 5. Pengujian end-to-end manual
 
+### 5.0 — Automated regression test
+
+Dari root repository, jalankan test bawaan Node.js berikut tanpa dependency tambahan:
+
+```powershell
+node --test tests/extension-toggle.test.js
+```
+
+**Expected:** seluruh test lulus untuk versi Manifest, switch popup, persistence, guard otomasi, dan badge `OFF`.
+
 Gunakan queue kecil untuk mengurangi waktu pengujian. Contoh input:
 
 ```text
@@ -147,6 +157,17 @@ Popup juga menampilkan status diagnostik seperti `player_ready`, `play_requested
 3. Amati kontrol autoplay.
 
 **Expected:** autoplay dimatikan ketika kontrol tersedia dan aktif. Tidak ada navigasi otomatis ke rekomendasi setelah track selesai selain progression queue ekstensi.
+
+### E2E-03a — Switch extension aktif/nonaktif
+
+1. Buka popup dan pastikan switch **Kontrol ekstensi** dalam keadaan **Aktif**.
+2. Mulai playlist melalui extension dan pastikan otomasi berjalan.
+3. Ubah switch menjadi **Nonaktif**.
+4. Putar playlist langsung dari YouTube Music dan lakukan navigasi atau resize window.
+5. Pastikan extension tidak mem-pause, tidak menjalankan autoplay, tidak mematikan autoplay native, tidak memilih hasil search, dan tidak memajukan queue.
+6. Aktifkan kembali switch dan pastikan kontrol extension kembali tersedia.
+
+**Expected:** mode nonaktif membiarkan playback native YouTube Music berjalan tanpa intervensi extension.
 
 ### E2E-04 — Pause sebelum navigasi (Previous/Next)
 

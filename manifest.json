@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YT Music Custom Player & Whitelist Scrobbler",
-  "version": "3.2.6",
+  "version": "3.2.7",
   "description": "Pemutar antrean YT Music dari catatan teks dengan whitelist scrobbler lokal.",
   "permissions": [
     "storage",

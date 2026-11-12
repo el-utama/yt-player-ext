@@ -2,7 +2,7 @@
 
 Manifest V3 Chrome Extension untuk menjalankan antrean lagu berbasis teks di YouTube Music dan mencatat histori pemutaran lokal secara selektif.
 
-> **Current version:** `3.2.6`
+> **Current version:** `3.2.7`
 
 ## Bahasa / Language
 
@@ -32,6 +32,8 @@ Extension ini menyediakan:
 - **Acak urutan antrean** (shuffle) saat memulai playlist.
 - Histori lokal dan ekspor CSV.
 - Popup dengan tiga ukuran: S, M, dan L (layout responsif).
+- **Switch global Aktif/Nonaktif** untuk membiarkan playlist YouTube Music berjalan tanpa intervensi ekstensi (badge "OFF" di ikon toolbar saat nonaktif).
+- **Pencarian dan pemilihan hasil diperbaiki** dengan penanganan *featuring artists*, pemisah artis, dan skor kecocokan yang lebih ketat.
 - **Indikator versi** di popup dengan status perlu reload.
 
 Extension ini ditujukan untuk penggunaan pribadi pada `https://music.youtube.com`.
@@ -142,6 +144,17 @@ Setiap lagu akan diputar selama durasi acak antara Min–Max. Jika durasi tercap
 - **Next:** menyelesaikan keputusan scrobble saat ini lalu berpindah ke item berikutnya.
 
 Next dan Previous mengubah `currentIndex` queue secara serial agar klik berulang tidak melewati beberapa lagu secara tidak sengaja.
+
+### 6a. Switch kontrol ekstensi
+
+Gunakan switch **Kontrol ekstensi** di bagian atas popup. Saat switch **Nonaktif**:
+
+- Ekstensi tidak akan mematikan autoplay, mencoba menjalankan atau menjeda video, memilih hasil pencarian, memajukan antrean, atau mencatat scrobble.
+- Badge **"OFF"** merah muncul di ikon toolbar Chrome.
+- Tooltip ikon berubah menjadi **YT Music Scrobbler — Nonaktif**.
+- Semua kontrol otomasi (Play/Pause, Next, Previous, Shuffle, Durasi acak) dinonaktifkan di popup.
+
+Ini memungkinkan playlist yang dimainkan langsung dari YouTube Music berjalan tanpa intervensi extension. Aktifkan kembali switch (badge hilang, tooltip **YT Music Scrobbler — Aktif**) untuk menggunakan otomasi extension.
 
 ### 7. Histori dan ekspor
 
@@ -278,6 +291,14 @@ Solusi:
 
 ## Pengujian Lokal
 
+Automated regression test untuk switch global dan badge dapat dijalankan tanpa instalasi dependency tambahan:
+
+```powershell
+node --test tests/extension-toggle.test.js
+```
+
+Test memverifikasi versi Manifest, markup switch, persistence `extensionEnabled`, guard content/service worker, serta kontrak badge `OFF`.
+
 Dokumentasi pengujian lebih rinci tersedia di:
 
 - [`INSTALL_AND_TESTING.md`](INSTALL_AND_TESTING.md)
@@ -367,6 +388,8 @@ It provides:
 - **Queue shuffle** (Fisher-Yates) on playlist start.
 - Local history and CSV export.
 - S, M, and L popup layouts (responsive).
+- **Global Enable/Disable toggle** to let native YouTube Music playback run without extension interference (badge "OFF" on toolbar icon when disabled).
+- **Improved search & selection** with featuring artist handling, artist separators, and stricter match scoring.
 - **Version indicator** in popup with reload status.
 
 The extension is intended for personal use on `https://music.youtube.com`.
@@ -471,7 +494,18 @@ Each track will play for a random duration between Min–Max. When the target is
 
 Queue transitions are serialized so rapid clicks do not intentionally skip multiple items.
 
-### 8. History and CSV export
+### 8. Extension Enable/Disable Toggle
+
+Use the **Extension Control** switch at the top of the popup. When **Disabled**:
+
+- The extension will not disable autoplay, attempt to play or pause video, select search results, advance the queue, or record scrobbles.
+- A red **"OFF"** badge appears on the Chrome toolbar icon.
+- The icon tooltip changes to **YT Music Scrobbler — Disabled**.
+- All automation controls (Play/Pause, Next, Previous, Shuffle, Random Duration) are disabled in the popup.
+
+This lets a playlist played directly from YouTube Music run without extension interference. Re-enable the switch (badge disappears, tooltip **YT Music Scrobbler — Enabled**) to resume extension automation.
+
+### 9. History and CSV export
 
 Open **Histori (Scrobble)** to view local history. You can clear history or export it as CSV. CSV fields are quoted, internal quotes are escaped, and timestamps use the local locale format.
 
@@ -561,6 +595,14 @@ See:
 
 - [`INSTALL_AND_TESTING.md`](INSTALL_AND_TESTING.md)
 - [`PUPPETEER_DOM_AUDIT.md`](PUPPETEER_DOM_AUDIT.md)
+
+Automated regression test for the extension toggle and badge can be run without additional dependencies:
+
+```powershell
+node --test tests/extension-toggle.test.js
+```
+
+Test verifies Manifest version, toggle markup, `extensionEnabled` persistence, content/service worker guards, and `OFF` badge contract.
 
 The Puppeteer DOM audit script is located at:
 

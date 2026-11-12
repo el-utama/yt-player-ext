@@ -7,6 +7,28 @@ const state = {
 const storageGet = (keys) => new Promise((resolve) => chrome.storage.local.get(keys, resolve));
 const storageSet = (values) => new Promise((resolve) => chrome.storage.local.set(values, resolve));
 
+async function isExtensionEnabled() {
+  const data = await storageGet(['extensionEnabled']);
+  return data.extensionEnabled !== false;
+}
+
+async function updateExtensionBadge(enabled) {
+  const active = Boolean(enabled);
+  try {
+    await chrome.action.setBadgeText({ text: active ? '' : 'OFF' });
+    await chrome.action.setBadgeBackgroundColor({ color: active ? '#555555' : '#d93025' });
+    await chrome.action.setTitle({
+      title: active ? 'YT Music Scrobbler — Aktif' : 'YT Music Scrobbler — Nonaktif'
+    });
+  } catch (_error) {
+    // Badge tidak boleh mengganggu playback bila API action tidak tersedia.
+  }
+}
+
+async function refreshExtensionBadge() {
+  await updateExtensionBadge(await isExtensionEnabled());
+}
+
 function isPlayerSender(sender) {
   return Boolean(
     sender?.tab?.id &&
@@ -69,6 +91,7 @@ async function pausePlayer(tabId) {
 }
 
 async function playTrackAtIndex(index) {
+  if (!await isExtensionEnabled()) return;
   const data = await storageGet(['queue']);
   const queue = normalizeQueue(data.queue);
   if (!Number.isInteger(index) || index < 0 || index >= queue.length) {
@@ -88,6 +111,7 @@ async function playTrackAtIndex(index) {
   });
 
   const tab = await getOrCreatePlayerTab();
+  if (!await isExtensionEnabled()) return;
   // Jeda pemutaran sebelum navigasi agar halaman pemain tidak menampilkan
   // dialog "Anda yakin ingin meninggalkan halaman ini?" saat lagu masih berjalan.
   await pausePlayer(tab.id);
@@ -155,10 +179,18 @@ async function saveScrobble(trackInfo) {
 
 chrome.runtime.onInstalled.addListener(() => {
   void reconcilePlayerTab();
+  void refreshExtensionBadge();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   void reconcilePlayerTab();
+  void refreshExtensionBadge();
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local' && changes.extensionEnabled) {
+    void updateExtensionBadge(changes.extensionEnabled.newValue !== false);
+  }
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
@@ -179,22 +211,46 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     switch (action) {
       case 'START_PLAYLIST':
+        if (!await isExtensionEnabled()) {
+          sendResponse({ ok: false, error: 'extension-disabled' });
+          return;
+        }
         await enqueueTransition(() => playTrackAtIndex(0));
         break;
       case 'TRACK_ENDED':
       case 'NEXT_TRACK':
+        if (!await isExtensionEnabled()) {
+          sendResponse({ ok: false, error: 'extension-disabled' });
+          return;
+        }
         await nextTrack();
         break;
       case 'PREV_TRACK':
+        if (!await isExtensionEnabled()) {
+          sendResponse({ ok: false, error: 'extension-disabled' });
+          return;
+        }
         await previousTrack();
         break;
       case 'TOGGLE_PLAY':
+        if (!await isExtensionEnabled()) {
+          sendResponse({ ok: false, error: 'extension-disabled' });
+          return;
+        }
         sendControlToPlayer('TOGGLE_PLAY');
         break;
       case 'MANUAL_SKIP':
+        if (!await isExtensionEnabled()) {
+          sendResponse({ ok: false, error: 'extension-disabled' });
+          return;
+        }
         sendControlToPlayer('TRIGGER_SKIP');
         break;
       case 'SCROBBLE':
+        if (!await isExtensionEnabled()) {
+          sendResponse({ ok: false, error: 'extension-disabled' });
+          return;
+        }
         if (!await saveScrobble(message.trackInfo)) {
           sendResponse({ ok: false, error: 'invalid-track-info' });
           return;
@@ -227,3 +283,4 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 void reconcilePlayerTab();
+void refreshExtensionBadge();

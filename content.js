@@ -3,15 +3,20 @@ const SELECTORS = {
   resultPlayButton: 'ytmusic-responsive-list-item-renderer .play-button',
   playerTitle: '.title.ytmusic-player-bar, ytmusic-player-bar .title',
   playPause: 'ytmusic-player-bar #play-pause-button, ytmusic-player-bar .play-pause-button, ytmusic-player-bar [aria-label="Play"], ytmusic-player-bar [aria-label="Pause"]',
-  autoplay: 'ytmusic-player-bar .toggle.ytmusic-player-bar, ytmusic-player-bar [aria-label*="Autoplay"]',
+  autoplay: 'ytmusic-player-bar .toggle.ytmusic-player-bar, ytmusic-player-bar [role="switch"], ytmusic-player-bar [aria-label*="Autoplay" i]',
   adMarkers: '.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text'
 };
+const SEARCH_RENDERERS = 'ytmusic-responsive-list-item-renderer, ytmusic-shelf-item-renderer, ytmusic-two-row-item-renderer, ytmusic-rich-item-renderer, ytmusic-card-shelf-renderer, ytmusic-shelf-renderer, ytmusic-hero-renderer';
 
 // Label autoplay / iklan dalam beberapa bahasa agar deteksi tidak hanya mengandalkan Bahasa Indonesia atau Inggris.
-const AUTOPLAY_LABELS = /autoplay|lecture automatique|putar otomatis|reproducción automática|wiedergabe automatisch|riproduzione automatica|reprodução automática|автовоспроизведение|自动播放|自動再生|오토 재생|otomatik oynatma|automatisk uppspelning|automatisk avspilling|automatisk afspilning|automatisch abspielen|เล่นอัตโนมัติ|tự động phát/i;
+const AUTOPLAY_LABELS = /autoplay|lecture automatique|putar otomatis|reproducci[oó]n autom[aá]tica|wiedergabe automatisch|riproduzione automatica|reprodu[cç][aã]o autom[aá]tica|автовоспроизведение|自动播放|自動再生|오토 재생|otomatik oynatma|automatisk uppspelning|automatisk avspilling|automatisk afspilning|automatisch abspielen|เล่นอัตโนมัติ|tự động phát/i;
 const AD_LABELS = /advertisement|ad\s*interrupt|publicité|pub\s*interrupt|anuncio|anuncio\s*interrumpido|werbung|werbeunterbrechung|pubblicità|interruzione\s*pubblicitaria|propaganda|宣伝|広告|광고|재klama|reklame|reklam/i;
 
+const FEATURING_WORDS = /\b(?:feat(?:uring)?\.?|ft\.?|with|and|con|com|mit|avec|mukana|kanssa|配|ร่วมกับ|с\s+участием)\b/giu;
+const ARTIST_SEPARATOR = /\s*(?:,|&|\+|×|\bx\b|\/|\||;|\bfeat(?:uring)?\.?\b|\bft\.?\b|\bwith\b|\band\b|\bcon\b|\bcom\b|\bmit\b|\bavec\b|\bmukana\b|\bkanssa\b|配|ร่วมกับ|с\s+участием)\s*/giu;
+
 const state = {
+  enabled: false,
   monitorTimer: null,
   observer: null,
   video: null,
@@ -94,15 +99,37 @@ function normalizeText(value) {
     .trim();
 }
 
+function parseTrackQuery(expectedQuery) {
+  const raw = String(expectedQuery || '').trim();
+  const separator = raw.lastIndexOf(' - ');
+  const title = separator > 0 ? raw.slice(0, separator) : raw;
+  const artistText = separator > 0 ? raw.slice(separator + 3) : '';
+  const artists = artistText
+    .replace(FEATURING_WORDS, '|')
+    .split(ARTIST_SEPARATOR)
+    .flatMap((part) => part.split('|'))
+    .map((part) => normalizeText(part).replace(/\b(?:official|audio|video|lyrics?)\b/g, ' ').replace(/\s+/g, ' ').trim())
+    .filter((part, index, list) => part.length >= 2 && list.indexOf(part) === index);
+  return { raw, title: normalizeText(title), artistText: normalizeText(artistText), artists };
+}
+
+function artistTokens(value) {
+  return normalizeText(value)
+    .replace(FEATURING_WORDS, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length >= 2 && !/^(?:official|audio|video|lyrics?)$/i.test(word));
+}
+
 function isWhitelisted(currentTitle, expectedQuery) {
   const title = normalizeText(currentTitle);
-  const query = normalizeText(expectedQuery).replace(/\bofficial audio\b/g, '').trim();
-  if (!title || !query) return false;
+  const parsed = parseTrackQuery(expectedQuery);
+  if (!title || !parsed.title) return false;
 
-  const keywords = query.split(/[~\-\s]+/).filter((word) => word.length >= 3);
-  if (keywords.length === 0) return false;
-  const matches = keywords.filter((word) => title.includes(word));
-  return matches.length >= Math.min(2, keywords.length) || (keywords.length === 1 && matches.length === 1);
+  const titleWords = parsed.title.split(/[\s\-]+/).filter((word) => word.length >= 2);
+  const titleMatches = titleWords.filter((word) => title.includes(word)).length;
+  return titleWords.length === 1
+    ? titleMatches === 1
+    : titleMatches >= Math.min(2, titleWords.length);
 }
 
 function getTrackTitle() {
@@ -116,26 +143,30 @@ function getTrackIdentity(video, title) {
 
 function scoreSearchResult(text, expectedQuery) {
   const candidate = normalizeText(text);
-  const expected = String(expectedQuery || '').trim();
-  const separator = expected.lastIndexOf(' - ');
-  const parts = separator > 0
-    ? [expected.slice(0, separator), expected.slice(separator + 3)]
-    : [expected];
-  parts.splice(0, parts.length, ...parts.map((part) => normalizeText(part)).filter(Boolean));
-  const titleTokens = (parts[0] || normalizeText(expectedQuery)).split(/[\s\-]+/).filter((word) => word.length >= 3);
-  const artistPhrase = parts[1] || '';
-  const artistTokens = artistPhrase.split(/[\s\-]+/).filter((word) => word.length >= 3);
+  const parsed = parseTrackQuery(expectedQuery);
+  const titleTokens = parsed.title.split(/[\s\-]+/).filter((word) => word.length >= 2);
+  const expectedArtistTokens = [...new Set(parsed.artists.flatMap(artistTokens))];
   const titleMatches = titleTokens.filter((token) => candidate.includes(token)).length;
-  const artistMatches = artistTokens.filter((token) => candidate.includes(token)).length;
-  const artistExact = Boolean(artistPhrase && candidate.includes(artistPhrase));
+  const artistMatches = expectedArtistTokens.filter((token) => candidate.includes(token)).length;
+  const titleExact = Boolean(parsed.title && candidate.includes(parsed.title));
+  const artistExact = parsed.artists.length > 0 && parsed.artists.every((artist) => candidate.includes(normalizeText(artist)));
+  const artistMatch = !parsed.artists.length || parsed.artists.every((artist) => {
+    const tokens = artistTokens(artist);
+    return tokens.length > 0 && tokens.some((token) => candidate.includes(token));
+  });
   return {
-    score: (artistExact ? 10000 : 0)
+    score: (titleExact ? 1000000000 : 0)
+      + (artistExact ? 1000000 : 0)
+      + (artistMatch ? 10000 : 0)
       + (titleMatches * 100) + artistMatches,
+    titleExact,
     titleMatches,
     titleCount: titleTokens.length,
+    artistExact,
     artistMatches,
-    artistCount: artistTokens.length,
-    artistExact
+    artistCount: expectedArtistTokens.length,
+    artistCoverage: expectedArtistTokens.length ? artistMatches / expectedArtistTokens.length : 1,
+    artistMatch
   };
 }
 
@@ -163,20 +194,38 @@ function resetTrackState(identity, sessionId, random) {
 }
 
 function disableAutoplay() {
-  const control = document.querySelector(SELECTORS.autoplay) || [...document.querySelectorAll('button, [role="switch"]')]
-    .find((candidate) => {
-      const label = `${candidate.getAttribute('aria-label') || ''} ${candidate.textContent || ''}`;
-      return AUTOPLAY_LABELS.test(label) && candidate.closest('ytmusic-player-bar, ytmusic-player-page, main');
-    });
-  if (!control) return;
+  if (!state.enabled || !window.location.pathname.includes('/watch')) return;
+  const candidates = [...document.querySelectorAll(SELECTORS.autoplay), ...document.querySelectorAll('button, [role="switch"], [role="button"]')];
+  const control = candidates.find((candidate) => {
+    const label = [
+      candidate.getAttribute('aria-label'),
+      candidate.getAttribute('title'),
+      candidate.getAttribute('data-tooltip-text'),
+      candidate.textContent
+    ].filter(Boolean).join(' ');
+    return AUTOPLAY_LABELS.test(label)
+      && candidate.closest('ytmusic-player-bar, ytmusic-player-page, main')
+      && candidate.offsetParent !== null
+      && !candidate.disabled;
+  });
+  if (!control) {
+    reportDecisionOnce('autoplay_control_not_found', 'autoplay_control_not_found');
+    return;
+  }
   const active = control.getAttribute('aria-pressed') === 'true'
     || control.hasAttribute('active')
     || control.getAttribute('aria-checked') === 'true'
-    || /enabled|aktif|activé|activado|activato|ativado|включен|オン|켜짐|på|tændt|aan/i.test(control.textContent || '');
+    || /enabled|on|aktif|activé|activado|activato|ativado|включен|オン|켜짐|på|tændt|aan/i.test([
+      control.textContent,
+      control.getAttribute('aria-label'),
+      control.getAttribute('title'),
+      control.getAttribute('data-state')
+    ].filter(Boolean).join(' '));
   if (active && typeof control.click === 'function') control.click();
 }
 
 async function maybeScrobble() {
+  if (!state.enabled) return false;
   if (state.scrobbled || state.eligibleSeconds < MIN_SCROBBLE_SECONDS) return false;
   const video = state.video;
   if (!video) {
@@ -218,11 +267,12 @@ async function maybeScrobble() {
 }
 
 async function advanceAfterDecision() {
+  if (!state.enabled) return;
   if (state.advancing) return;
   state.advancing = true;
   try {
     await maybeScrobble();
-    await sendMessage({ action: 'NEXT_TRACK' });
+    if (state.enabled) await sendMessage({ action: 'NEXT_TRACK' });
   } finally {
     state.advancing = false;
   }
@@ -249,8 +299,32 @@ function bindVideo(video) {
   tryStartPlayback(video);
 }
 
+function findPlayControl() {
+  const candidates = [
+    ...document.querySelectorAll(SELECTORS.playPause),
+    ...document.querySelectorAll('ytmusic-player-bar button, ytmusic-player-bar [role="button"]')
+  ];
+  const seen = new Set();
+  return candidates.find((candidate) => {
+    if (seen.has(candidate)) return false;
+    seen.add(candidate);
+    const label = [
+      candidate.getAttribute('aria-label'),
+      candidate.getAttribute('title'),
+      candidate.getAttribute('data-tooltip-text'),
+      candidate.textContent
+    ].filter(Boolean).join(' ').trim();
+    const playPauseWord = /play|pause|putar|jeda|lecture|reproduc|wiedergabe|riprodu|播放|再生|재생|воспроизвед|пауза/i.test(label);
+    const unrelatedControl = /\b(?:next|previous|volume|mute|queue|shuffle|repeat|seek|forward|back|speed|lyrics|suivant(?:e)?|siguiente|seguinte|n[aä]chste|successiv[ao]|следующ|volgende)\b|次へ|前へ|다음|이전/i.test(label);
+    return candidate.offsetParent !== null
+      && !candidate.disabled
+      && playPauseWord
+      && !unrelatedControl;
+  });
+}
+
 function tryStartPlayback(video) {
-  if (!video || !window.location.pathname.includes('/watch')) return;
+  if (!state.enabled || !video || !window.location.pathname.includes('/watch')) return;
   const identity = `${window.location.href.split('&')[0]}|${getTrackTitle()}`;
   const now = Date.now();
   if (state.playAttemptedIdentity === identity && now - state.playAttemptedAt < 4000) return;
@@ -264,9 +338,11 @@ function tryStartPlayback(video) {
 
   // Prefer the platform's own control before calling video.play(). This keeps
   // YT Music's internal player state synchronized with the HTMLMediaElement.
-  const playControl = document.querySelector(SELECTORS.playPause);
+  const playControl = findPlayControl();
   if (playControl) {
     playControl.click();
+  } else {
+    reportStatus('play_control_not_found');
   }
 
   video.play().then(() => {
@@ -277,6 +353,7 @@ function tryStartPlayback(video) {
 }
 
 function tick() {
+  if (!state.enabled) return;
   const video = document.querySelector('video');
   if (!video) return;
   bindVideo(video);
@@ -308,6 +385,7 @@ function tick() {
 }
 
 async function selectFirstTrack() {
+  if (!state.enabled) return;
   if (state.selecting) return;
   state.selecting = true;
   const { currentExpectedQuery } = await storageGet(['currentExpectedQuery']);
@@ -317,46 +395,62 @@ async function selectFirstTrack() {
   let attempts = 0;
   const interval = setInterval(() => {
     attempts += 1;
-    if (token !== state.navigationToken || !window.location.pathname.includes('/search')) {
+    if (!state.enabled || token !== state.navigationToken || !window.location.pathname.includes('/search')) {
       clearInterval(interval);
       state.selecting = false;
       return;
     }
     const seen = new Set();
-    const candidates = [...document.querySelectorAll('a')]
-      .filter((anchor) => /(?:^|\/)watch\?v=/.test(anchor.getAttribute('href') || ''))
-      .map((anchor) => {
-        const href = anchor.href;
-        if (seen.has(href)) return null;
-        seen.add(href);
-        const container = anchor.closest('ytmusic-responsive-list-item-renderer, ytmusic-shelf-item-renderer, ytmusic-two-row-item-renderer, ytmusic-rich-item-renderer');
+    const sources = [
+      ...document.querySelectorAll('a[href*="/watch?v="]'),
+      ...[...document.querySelectorAll('button, [role="button"]')].filter((button) => {
+        const label = [button.getAttribute('aria-label'), button.getAttribute('title'), button.textContent]
+          .filter(Boolean).join(' ');
+        return /play|putar|reproduc|wiedergabe|riprodu|播放|再生|재생/i.test(label)
+          && !/next|previous|save|queue|volume|mute|shuffle|repeat/i.test(label)
+          && button.offsetParent !== null;
+      })
+    ];
+    const candidates = sources
+      .map((source) => {
+        const isAnchor = source.tagName === 'A';
+        const anchor = isAnchor
+          ? source
+          : source.closest(SEARCH_RENDERERS)?.querySelector('a[href*="/watch?v="]');
+        const container = source.closest(SEARCH_RENDERERS) || anchor?.closest(SEARCH_RENDERERS);
+        if (!container) return null;
+        const href = anchor?.href || '';
+        const key = href || container;
+        if (seen.has(key)) return null;
+        seen.add(key);
+        const playButton = isAnchor
+          ? [...container.querySelectorAll('button, [role="button"]')].find((button) => /play|putar|reproduc|wiedergabe|riprodu|播放|再生|재생/i.test([button.getAttribute('aria-label'), button.getAttribute('title'), button.textContent].filter(Boolean).join(' ')))
+          : source;
         const context = [
-          container?.textContent,
-          anchor.parentElement?.parentElement?.textContent,
-          anchor.getAttribute('aria-label'),
-          anchor.textContent
+          container.textContent,
+          anchor?.getAttribute('aria-label'),
+          anchor?.textContent,
+          source.getAttribute?.('aria-label'),
+          source.getAttribute?.('title')
         ].filter(Boolean).join(' ');
-        return {
-          anchor,
-          match: scoreSearchResult(context, expectedQuery)
-        };
+        return { anchor, playButton, match: scoreSearchResult(context, expectedQuery) };
       })
       .filter(Boolean)
       .sort((left, right) => right.match.score - left.match.score);
-    const best = candidates[0];
-    const button = best?.anchor?.closest('ytmusic-responsive-list-item-renderer')
-      ?.querySelector(SELECTORS.resultPlayButton);
+    const eligibleCandidates = candidates.filter((candidate) => {
+      const match = candidate.match;
+      const titleMatch = match.titleCount > 0
+        && match.titleMatches === match.titleCount;
+      return titleMatch && match.artistMatch;
+    });
+    const best = eligibleCandidates[0];
     const anchor = best?.anchor;
-    const artistMatch = best && (best.match.artistCount === 0 || best.match.artistExact);
-    if (anchor && artistMatch && (best.match.titleMatches > 0 || attempts >= 4)) {
+    if (best && attempts >= 4) {
       clearInterval(interval);
       state.selecting = false;
-      reportStatus('search_selected', anchor.href);
-      window.location.assign(anchor.href);
-    } else if (button && !button.disabled && best?.match.artistCount === 0) {
-      clearInterval(interval);
-      state.selecting = false;
-      button.click();
+      reportStatus('search_selected', `${anchor?.href || 'top_result_play'} | title_exact=${best.match.titleExact} | artist_exact=${best.match.artistExact}`);
+      if (anchor) window.location.assign(anchor.href);
+      else best.playButton?.click();
     } else if (attempts >= 30) {
       clearInterval(interval);
       state.selecting = false;
@@ -367,6 +461,15 @@ async function selectFirstTrack() {
 
 async function handleNavigation() {
   state.navigationToken += 1;
+  const enabledState = await storageGet(['extensionEnabled']);
+  state.enabled = enabledState.extensionEnabled !== false;
+  if (!state.enabled) {
+    state.navigationToken += 1;
+    state.selecting = false;
+    state.advancing = false;
+    reportStatus('disabled', 'Ekstensi nonaktif');
+    return;
+  }
   disableAutoplay();
   const data = await storageGet(['autoSelectNeeded']);
   if (data.autoSelectNeeded && window.location.pathname.includes('/search')) {
@@ -382,6 +485,10 @@ async function handleNavigation() {
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (!state.enabled) {
+    sendResponse({ ok: false, error: 'extension-disabled' });
+    return false;
+  }
   const video = document.querySelector('video');
   if (message?.action === 'TOGGLE_PLAY' && window.location.pathname.includes('/search')) {
     selectFirstTrack();
@@ -411,9 +518,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 window.addEventListener('yt-navigate-finish', handleNavigation, { passive: true });
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local' || !changes.extensionEnabled) return;
+  state.enabled = changes.extensionEnabled.newValue !== false;
+  if (!state.enabled) {
+    state.selecting = false;
+    state.advancing = false;
+    state.eligibleSeconds = 0;
+    reportStatus('disabled', 'Ekstensi nonaktif');
+  } else {
+    void handleNavigation();
+  }
+});
 state.observer = new MutationObserver(() => {
   disableAutoplay();
-  if (!state.video) bindVideo(document.querySelector('video'));
+  if (state.enabled && !state.video) bindVideo(document.querySelector('video'));
 });
 state.observer.observe(document.documentElement, { childList: true, subtree: true });
 state.monitorTimer = setInterval(tick, 500);

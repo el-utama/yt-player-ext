@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const randomMin = $('randomMin');
   const randomMax = $('randomMax');
   const shuffleEnable = $('shuffleEnable');
+  const extensionEnabled = $('extensionEnabled');
+  const extensionEnabledLabel = $('extensionEnabledLabel');
+  const automationControls = [songListInput, startBtn, $('prevBtn'), $('togglePlayBtn'), $('nextBtn'), shuffleEnable, randomEnable, randomMin, randomMax];
 
   const storageGet = (keys) => new Promise((resolve) => chrome.storage.local.get(keys, resolve));
   const storageSet = (values) => new Promise((resolve) => chrome.storage.local.set(values, resolve));
@@ -37,6 +40,16 @@ document.addEventListener('DOMContentLoaded', () => {
     status.classList.toggle('error', isError);
   }
 
+  function applyExtensionEnabled(enabled, announce = true) {
+    const active = Boolean(enabled);
+    if (extensionEnabled) extensionEnabled.checked = active;
+    if (extensionEnabledLabel) extensionEnabledLabel.textContent = active ? 'Aktif' : 'Nonaktif';
+    automationControls.forEach((control) => {
+      if (control) control.disabled = !active;
+    });
+    if (announce) setStatus(active ? 'Ekstensi aktif' : 'Ekstensi nonaktif — playback YT Music tidak diganggu');
+  }
+
   function showTab(showHistory) {
     playlistSection.style.display = showHistory ? 'none' : 'block';
     historySection.style.display = showHistory ? 'block' : 'none';
@@ -46,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function refreshQueueUI() {
-    const data = await storageGet(['queue', 'currentIndex', 'playbackStatus', 'playbackDetails']);
+    const data = await storageGet(['queue', 'currentIndex', 'playbackStatus', 'playbackDetails', 'extensionEnabled']);
     queueList.textContent = '';
     (Array.isArray(data.queue) ? data.queue : []).forEach((track, index) => {
       const li = document.createElement('li');
@@ -55,7 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
       queueList.appendChild(li);
     });
     const detail = data.playbackDetails ? ` (${data.playbackDetails})` : '';
-    setStatus(data.playbackStatus ? `Status: ${data.playbackStatus}${detail}` : 'Siap');
+    if (data.extensionEnabled === false) setStatus('Ekstensi nonaktif — playback YT Music tidak diganggu');
+    else setStatus(data.playbackStatus ? `Status: ${data.playbackStatus}${detail}` : 'Siap');
   }
 
   async function loadHistory() {
@@ -106,6 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
   tabHistoryBtn.addEventListener('click', () => showTab(true));
 
   startBtn.addEventListener('click', async () => {
+    const enabledState = await storageGet(['extensionEnabled']);
+    if (enabledState.extensionEnabled === false) {
+      applyExtensionEnabled(false);
+      return;
+    }
     let tracks = songListInput.value
       .split(/\r?\n/)
       .map((track) => track.replace(/\t+/g, ' - ').replace(/\s{2,}/g, ' ').trim())
@@ -126,17 +145,22 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   $('nextBtn').addEventListener('click', async () => {
+    if (extensionEnabled && !extensionEnabled.checked) return;
     await send({ action: 'MANUAL_SKIP' });
     setStatus('Memproses skip…');
     setTimeout(refreshQueueUI, 500);
   });
 
   $('prevBtn').addEventListener('click', async () => {
+    if (extensionEnabled && !extensionEnabled.checked) return;
     await send({ action: 'PREV_TRACK' });
     setTimeout(refreshQueueUI, 500);
   });
 
-  $('togglePlayBtn').addEventListener('click', () => send({ action: 'TOGGLE_PLAY' }));
+  $('togglePlayBtn').addEventListener('click', () => {
+    if (extensionEnabled && !extensionEnabled.checked) return;
+    void send({ action: 'TOGGLE_PLAY' });
+  });
 
   $('clearHistoryBtn').addEventListener('click', async () => {
     if (!confirm('Hapus seluruh histori pemutaran?')) return;
@@ -188,7 +212,19 @@ document.addEventListener('DOMContentLoaded', () => {
     shuffleEnable.addEventListener('change', () => void saveShuffleConfig());
   }
 
+  if (extensionEnabled) {
+    extensionEnabled.addEventListener('change', async () => {
+      const enabled = extensionEnabled.checked;
+      await storageSet({ extensionEnabled: enabled, autoSelectNeeded: false });
+      applyExtensionEnabled(enabled);
+      await refreshQueueUI();
+    });
+  }
+
   void storageGet(['popupSize']).then(({ popupSize }) => applyPopupSize(popupSize));
+  void storageGet(['extensionEnabled']).then(({ extensionEnabled: enabled }) => {
+    applyExtensionEnabled(enabled !== false, false);
+  });
   void storageGet(['randomEnabled', 'randomMinSeconds', 'randomMaxSeconds']).then(({ randomEnabled, randomMinSeconds, randomMaxSeconds }) => {
     if (randomEnable) randomEnable.checked = Boolean(randomEnabled);
     if (randomMin) randomMin.value = Number.isFinite(randomMinSeconds) ? randomMinSeconds : '';
@@ -196,6 +232,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   void storageGet(['shuffleEnabled']).then(({ shuffleEnabled }) => {
     if (shuffleEnable) shuffleEnable.checked = Boolean(shuffleEnabled);
+  });
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local' && changes.extensionEnabled) {
+      applyExtensionEnabled(changes.extensionEnabled.newValue !== false);
+    }
   });
   void refreshQueueUI();
 });
