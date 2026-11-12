@@ -507,7 +507,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   } else if (message?.action === 'PAUSE') {
     const video = document.querySelector('video');
     if (video && !video.paused) {
-      video.pause();
+      try {
+        await video.pause();
+      } catch (_error) {
+        // Ignore pause errors (already paused, interrupted, etc.)
+      }
       reportStatus('paused');
     }
     sendResponse({ ok: true });

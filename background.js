@@ -114,7 +114,11 @@ async function playTrackAtIndex(index) {
   if (!await isExtensionEnabled()) return;
   // Jeda pemutaran sebelum navigasi agar halaman pemain tidak menampilkan
   // dialog "Anda yakin ingin meninggalkan halaman ini?" saat lagu masih berjalan.
-  await pausePlayer(tab.id);
+  // Hanya pause jika sedang di halaman watch (video sedang diputar).
+  const tabInfo = await chrome.tabs.get(tab.id);
+  if (tabInfo.url && tabInfo.url.includes('/watch')) {
+    await pausePlayer(tab.id);
+  }
   await new Promise((resolve) => chrome.tabs.update(tab.id, {
     url: `${PLAYER_ORIGIN}/search?q=${encodeURIComponent(qualifiedSearchQuery(rawQuery))}`,
     active: true
