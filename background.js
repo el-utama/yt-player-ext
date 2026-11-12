@@ -83,10 +83,28 @@ async function getOrCreatePlayerTab() {
 }
 
 async function pausePlayer(tabId) {
+  // Use scripting API to directly pause video - more reliable than message passing
+  // to prevent "leave page" dialog when navigating away from playing video.
   try {
-    await chrome.tabs.sendMessage(tabId, { action: 'PAUSE' });
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        const video = document.querySelector('video');
+        if (video && !video.paused) {
+          video.pause();
+        }
+      }
+    });
+    // Small delay to ensure pause takes effect before navigation
+    await new Promise((resolve) => setTimeout(resolve, 150));
   } catch (_error) {
-    // Tab may not have a content script yet; navigation will still proceed.
+    // Tab may not have a content script yet or scripting not allowed; navigation will still proceed.
+    // Fallback to message passing for older contexts.
+    try {
+      await chrome.tabs.sendMessage(tabId, { action: 'PAUSE' });
+    } catch (_e) {
+      // Ignore
+    }
   }
 }
 
@@ -110,19 +128,21 @@ async function playTrackAtIndex(index) {
     playbackStatus: 'loading'
   });
 
-  const tab = await getOrCreatePlayerTab();
-  if (!await isExtensionEnabled()) return;
-  // Jeda pemutaran sebelum navigasi agar halaman pemain tidak menampilkan
-  // dialog "Anda yakin ingin meninggalkan halaman ini?" saat lagu masih berjalan.
-  // Hanya pause jika sedang di halaman watch (video sedang diputar).
-  const tabInfo = await chrome.tabs.get(tab.id);
-  if (tabInfo.url && tabInfo.url.includes('/watch')) {
+  try {
+    const tab = await getOrCreatePlayerTab();
+    if (!await isExtensionEnabled()) return;
+    // Jeda pemutaran sebelum navigasi agar halaman pemain tidak menampilkan
+    // dialog "Anda yakin ingin meninggalkan halaman ini?" saat lagu masih berjalan.
     await pausePlayer(tab.id);
+    await new Promise((resolve) => chrome.tabs.update(tab.id, {
+      url: `${PLAYER_ORIGIN}/search?q=${encodeURIComponent(qualifiedSearchQuery(rawQuery))}`,
+      active: true
+    }, resolve));
+  } catch (error) {
+    // Ensure status is reset on failure so UI doesn't stay stuck on 'loading'
+    await storageSet({ playbackStatus: 'idle' });
+    throw error;
   }
-  await new Promise((resolve) => chrome.tabs.update(tab.id, {
-    url: `${PLAYER_ORIGIN}/search?q=${encodeURIComponent(qualifiedSearchQuery(rawQuery))}`,
-    active: true
-  }, resolve));
 }
 
 function enqueueTransition(task) {
