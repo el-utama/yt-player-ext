@@ -21,7 +21,7 @@ Dokumen ini menjelaskan cara memasang ekstensi secara lokal menggunakan **Load u
 
 5. Pastikan kartu ekstensi **YT Music Custom Player & Whitelist Scrobbler** muncul tanpa pesan error.
 6. Klik **Details** dan verifikasi:
-   - Extension version: `3.2.7`.
+   - Extension version: `3.2.8`.
    - Site access hanya untuk `music.youtube.com`.
    - Popup tersedia ketika ikon ekstensi diklik.
 7. Jika sebelumnya versi lama terpasang, gunakan **Reload** setelah setiap perubahan file. Bila service worker tampak macet, klik **Remove**, lalu Load unpacked kembali.

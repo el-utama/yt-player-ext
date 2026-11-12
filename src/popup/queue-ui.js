@@ -4,7 +4,6 @@ import { getStorage, setStorage, STORAGE_KEYS } from './storage.js';
 import { sendMessage } from '../shared/messaging.js';
 import { $, setStatus, applyExtensionEnabled } from './ui.js';
 import { normalizeQueue } from '../shared/utils.js';
-import { state } from '../content/state.js'; // For shuffle/random config
 
 /**
  * Refresh queue UI display
@@ -107,8 +106,12 @@ export function setupPlaybackControls() {
     const enabledState = await getStorage([STORAGE_KEYS.EXTENSION_ENABLED]);
     if (enabledState[STORAGE_KEYS.EXTENSION_ENABLED] === false) return;
     
-    await sendMessage({ action: 'MANUAL_SKIP' });
     setStatus('Memproses skip…');
+    const response = await sendMessage({ action: 'MANUAL_SKIP' });
+    if (!response.ok) {
+      setStatus(`Skip gagal: ${response.error}`, true);
+      return;
+    }
     setTimeout(refreshQueueUI, 500);
   });
   
@@ -116,15 +119,22 @@ export function setupPlaybackControls() {
     const enabledState = await getStorage([STORAGE_KEYS.EXTENSION_ENABLED]);
     if (enabledState[STORAGE_KEYS.EXTENSION_ENABLED] === false) return;
     
-    await sendMessage({ action: 'PREV_TRACK' });
+    const response = await sendMessage({ action: 'PREV_TRACK' });
+    if (!response.ok) {
+      setStatus(`Previous gagal: ${response.error}`, true);
+      return;
+    }
     setTimeout(refreshQueueUI, 500);
   });
   
-  togglePlayBtn?.addEventListener('click', () => {
-    const enabledState = getStorage([STORAGE_KEYS.EXTENSION_ENABLED]);
+  togglePlayBtn?.addEventListener('click', async () => {
+    const enabledState = await getStorage([STORAGE_KEYS.EXTENSION_ENABLED]);
     if (enabledState[STORAGE_KEYS.EXTENSION_ENABLED] === false) return;
     
-    void sendMessage({ action: 'TOGGLE_PLAY' });
+    const response = await sendMessage({ action: 'TOGGLE_PLAY' });
+    if (!response.ok) {
+      setStatus(`Kontrol gagal: ${response.error}`, true);
+    }
   });
 }
 

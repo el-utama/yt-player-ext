@@ -23,6 +23,8 @@ const sharedUtils = read('src/shared/utils.js');
 const backgroundBadge = read('src/background/badge.js');
 const backgroundStorage = read('src/background/storage.js');
 const backgroundMessaging = read('src/background/messaging.js');
+const backgroundQueue = read('src/background/queue.js');
+const backgroundBootstrap = read('src/background/bootstrap.js');
 
 function extensionEnabled(storage) {
   return storage.extensionEnabled !== false;
@@ -36,6 +38,28 @@ test('manifest version and MV3 action are present', () => {
   assert.equal(manifest.manifest_version, 3);
   assert.equal(manifest.version, '3.2.8');
   assert.ok(manifest.action, 'manifest.action must exist for badge support');
+  assert.ok(manifest.permissions.includes('scripting'), 'scripting permission is required by pausePlayer()');
+});
+
+test('background reconciles the player tab on every service worker start', () => {
+  assert.match(backgroundBootstrap, /async function initPlayerTab\(\)/);
+  assert.match(backgroundBootstrap, /await ensurePlayerTabId\(getStorage\)/);
+  assert.match(backgroundBootstrap, /void initPlayerTab\(\);/);
+  assert.match(backgroundBootstrap, /onTabRemoved\(tabId, getState\(\), setStorage\)/);
+});
+
+test('queue keeps playerTabId in sync for existing and new tabs', () => {
+  assert.match(backgroundQueue, /export async function ensurePlayerTabId/);
+  assert.match(backgroundQueue, /state\.playerTabId = tab\.id/);
+  assert.match(backgroundQueue, /state\.playerTabId = existing\.id/);
+  assert.match(backgroundQueue, /\[STORAGE_KEYS\.PLAYER_TAB_ID\]: existing\.id/);
+});
+
+test('manual skip reports delivery failure instead of silently succeeding', () => {
+  assert.match(backgroundMessaging, /await sendControlToPlayer\('TRIGGER_SKIP', getStorage\)/);
+  assert.match(backgroundMessaging, /no-player-tab/);
+  assert.match(backgroundMessaging, /await ensurePlayerTabId\(getStorage\)/);
+  assert.match(popupQueueUI, /Skip gagal/);
 });
 
 test('popup exposes a persistent global switch', () => {
@@ -44,6 +68,14 @@ test('popup exposes a persistent global switch', () => {
   assert.match(popupQueueUI, /extensionEnabled/);
   assert.match(popupUI, /applyExtensionEnabled/);
   assert.match(stylesCss, /\.switch-slider/);
+});
+
+test('popup controls use the real element ids', () => {
+  assert.match(popupUI, /\$\('songList'\)/);
+  assert.doesNotMatch(popupUI, /\$\('songListInput'\)/);
+  assert.doesNotMatch(popupQueueUI, /\$\('songListInput'\)/);
+  assert.match(popupUI, /adSkipEnable/);
+  assert.match(popupQueueUI, /Skip gagal/);
 });
 
 test('switch defaults to enabled and disabled storage turns automation off', () => {
@@ -58,6 +90,8 @@ test('content script guards all automation entry points', () => {
   assert.match(contentMessaging, /extension-disabled/);
   assert.match(contentMessaging, /if \(!state\.enabled\)/);
   assert.match(contentMessaging, /sendResponse.*ok: false/);
+  assert.doesNotMatch(contentMessaging, /addListener\(async/);
+  assert.match(contentMessaging, /return true; \/\/ Async response/);
 });
 
 test('background rejects commands while disabled and cancels queued navigation', () => {

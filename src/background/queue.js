@@ -3,8 +3,8 @@
 import { PLAYER_ORIGIN } from '../shared/constants.js';
 import { STORAGE_KEYS } from './storage.js';
 import { normalizeQueue, generateSessionId } from '../shared/utils.js';
-import { isExtensionEnabled } from './storage.js';
-import { pausePlayer } from './tab-manager.js';
+import { isExtensionEnabled, getStorage, setStorage } from './storage.js';
+import { pausePlayer, reconcilePlayerTab } from './tab-manager.js';
 
 const state = {
   playerTabId: null,
@@ -17,6 +17,35 @@ export function getState() {
 
 export function setPlayerTabId(tabId) {
   state.playerTabId = tabId;
+}
+
+function getTabById(tabId) {
+  return new Promise((resolve) => {
+    chrome.tabs.get(tabId, (tab) => {
+      resolve(chrome.runtime.lastError ? null : tab);
+    });
+  });
+}
+
+/**
+ * Resolve the player tab id, reconciling with real tabs when the in-memory
+ * state is empty (e.g. after the MV3 service worker was restarted).
+ */
+export async function ensurePlayerTabId(getStorageFn = getStorage) {
+  if (Number.isInteger(state.playerTabId)) {
+    const current = await getTabById(state.playerTabId);
+    if (current?.url?.startsWith(PLAYER_ORIGIN)) return state.playerTabId;
+    state.playerTabId = null;
+  }
+
+  const tab = await reconcilePlayerTab(getStorageFn);
+  if (tab?.id) {
+    state.playerTabId = tab.id;
+    await setStorage({ [STORAGE_KEYS.PLAYER_TAB_ID]: tab.id });
+    return tab.id;
+  }
+
+  return null;
 }
 
 /**
@@ -74,20 +103,22 @@ export async function playTrackAtIndex(index, getStorageFn, setStorageFn) {
 }
 
 /**
- * Get or create player tab (uses tab-manager)
+ * Get existing player tab or create a new one, keeping state in sync.
  */
 async function getOrCreatePlayerTab(getStorageFn, setStorageFn) {
-  const { reconcilePlayerTab } = await import('./tab-manager.js');
-  return reconcilePlayerTab(getStorageFn).then(async (existing) => {
-    if (existing) return existing;
-    
-    const tab = await new Promise((resolve) => 
-      chrome.tabs.create({ url: PLAYER_ORIGIN, active: true }, resolve)
-    );
-    await setStorageFn({ [STORAGE_KEYS.PLAYER_TAB_ID]: tab.id });
-    state.playerTabId = tab.id;
-    return tab;
-  });
+  const existing = await reconcilePlayerTab(getStorageFn);
+  if (existing?.id) {
+    state.playerTabId = existing.id;
+    await setStorageFn({ [STORAGE_KEYS.PLAYER_TAB_ID]: existing.id });
+    return existing;
+  }
+
+  const tab = await new Promise((resolve) => 
+    chrome.tabs.create({ url: PLAYER_ORIGIN, active: true }, resolve)
+  );
+  state.playerTabId = tab.id;
+  await setStorageFn({ [STORAGE_KEYS.PLAYER_TAB_ID]: tab.id });
+  return tab;
 }
 
 /**
@@ -127,11 +158,16 @@ export async function previousTrack(getStorageFn, setStorageFn) {
 }
 
 /**
- * Send control message to player tab
+ * Send control message to player tab. Resolves to true when delivered.
  */
-export function sendControlToPlayer(action) {
-  if (!state.playerTabId) return;
-  chrome.tabs.sendMessage(state.playerTabId, { action }, () => {
-    void chrome.runtime.lastError;
-  });
+export async function sendControlToPlayer(action, getStorageFn = getStorage) {
+  const tabId = await ensurePlayerTabId(getStorageFn);
+  if (!tabId) return false;
+
+  try {
+    await chrome.tabs.sendMessage(tabId, { action });
+    return true;
+  } catch (_error) {
+    return false;
+  }
 }

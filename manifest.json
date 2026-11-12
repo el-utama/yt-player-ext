@@ -5,7 +5,8 @@
   "description": "Pemutar antrean YT Music dari catatan teks dengan whitelist scrobbler lokal.",
   "permissions": [
     "storage",
-    "tabs"
+    "tabs",
+    "scripting"
   ],
   "host_permissions": [
     "https://music.youtube.com/*"

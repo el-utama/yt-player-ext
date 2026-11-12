@@ -4,93 +4,97 @@ import { STORAGE_KEYS } from './storage.js';
 import { isExtensionEnabled } from './storage.js';
 import { getStorage, setStorage } from './storage.js';
 import { saveScrobble } from './scrobble.js';
-import { nextTrack, previousTrack, sendControlToPlayer } from './queue.js';
+import { nextTrack, previousTrack, playTrackAtIndex, sendControlToPlayer, ensurePlayerTabId, getState } from './queue.js';
 import { isPlayerSender } from '../shared/messaging.js';
+
+const CONTENT_ACTIONS = new Set([
+  'TRACK_ENDED', 'NEXT_TRACK', 'SCROBBLE', 'PLAYBACK_STATUS', 'CONTENT_READY',
+]);
+
+/**
+ * Validate a content-script sender. The player tab id may be missing after a
+ * service worker restart, so reconcile it before rejecting the message.
+ */
+export async function isTrustedContentSender(sender) {
+  if (!sender?.tab?.id) return false;
+  if (isPlayerSender(sender, getState().playerTabId)) return true;
+
+  const tabId = await ensurePlayerTabId(getStorage);
+  return Boolean(tabId) && isPlayerSender(sender, tabId);
+}
 
 /**
  * Handle START_PLAYLIST message
  */
-export async function handleStartPlaylist(sendResponse) {
+export async function handleStartPlaylist() {
   if (!await isExtensionEnabled(getStorage)) {
-    sendResponse({ ok: false, error: 'extension-disabled' });
-    return;
+    return { ok: false, error: 'extension-disabled' };
   }
-  const { playTrackAtIndex } = await import('./queue.js');
   await playTrackAtIndex(0, getStorage, setStorage);
-  sendResponse({ ok: true });
+  return { ok: true };
 }
 
 /**
  * Handle NEXT_TRACK / TRACK_ENDED message
  */
-export async function handleNextTrack(sendResponse) {
+export async function handleNextTrack() {
   if (!await isExtensionEnabled(getStorage)) {
-    sendResponse({ ok: false, error: 'extension-disabled' });
-    return;
+    return { ok: false, error: 'extension-disabled' };
   }
   await nextTrack(getStorage, setStorage);
-  sendResponse({ ok: true });
+  return { ok: true };
 }
 
 /**
  * Handle PREV_TRACK message
  */
-export async function handlePrevTrack(sendResponse) {
+export async function handlePrevTrack() {
   if (!await isExtensionEnabled(getStorage)) {
-    sendResponse({ ok: false, error: 'extension-disabled' });
-    return;
+    return { ok: false, error: 'extension-disabled' };
   }
   await previousTrack(getStorage, setStorage);
-  sendResponse({ ok: true });
+  return { ok: true };
 }
 
 /**
  * Handle TOGGLE_PLAY message
  */
-export async function handleTogglePlay(sendResponse) {
+export async function handleTogglePlay() {
   if (!await isExtensionEnabled(getStorage)) {
-    sendResponse({ ok: false, error: 'extension-disabled' });
-    return;
+    return { ok: false, error: 'extension-disabled' };
   }
-  sendControlToPlayer('TOGGLE_PLAY');
-  sendResponse({ ok: true });
+  const sent = await sendControlToPlayer('TOGGLE_PLAY', getStorage);
+  return sent ? { ok: true } : { ok: false, error: 'no-player-tab' };
 }
 
 /**
  * Handle MANUAL_SKIP message
  */
-export async function handleManualSkip(sendResponse) {
+export async function handleManualSkip() {
   if (!await isExtensionEnabled(getStorage)) {
-    sendResponse({ ok: false, error: 'extension-disabled' });
-    return;
+    return { ok: false, error: 'extension-disabled' };
   }
-  sendControlToPlayer('TRIGGER_SKIP');
-  sendResponse({ ok: true });
+  const sent = await sendControlToPlayer('TRIGGER_SKIP', getStorage);
+  return sent ? { ok: true } : { ok: false, error: 'no-player-tab' };
 }
 
 /**
  * Handle SCROBBLE message
  */
-export async function handleScrobble(message, sendResponse) {
+export async function handleScrobble(message) {
   if (!await isExtensionEnabled(getStorage)) {
-    sendResponse({ ok: false, error: 'extension-disabled' });
-    return;
+    return { ok: false, error: 'extension-disabled' };
   }
   const ok = await saveScrobble(message.trackInfo);
-  if (!ok) {
-    sendResponse({ ok: false, error: 'invalid-track-info' });
-    return;
-  }
-  sendResponse({ ok: true });
+  return ok ? { ok: true } : { ok: false, error: 'invalid-track-info' };
 }
 
 /**
  * Handle PLAYBACK_STATUS message
  */
-export async function handlePlaybackStatus(message, sendResponse) {
+export async function handlePlaybackStatus(message) {
   if (typeof message.status !== 'string' || message.status.length > 80) {
-    sendResponse({ ok: false, error: 'invalid-status' });
-    return;
+    return { ok: false, error: 'invalid-status' };
   }
   await setStorage({
     [STORAGE_KEYS.PLAYBACK_STATUS]: message.status,
@@ -98,20 +102,59 @@ export async function handlePlaybackStatus(message, sendResponse) {
       ? message.details.slice(0, 300) 
       : '',
   });
-  sendResponse({ ok: true });
+  return { ok: true };
 }
 
 /**
  * Handle GET_STATE message
  */
-export async function handleGetState(sendResponse) {
-  const data = await getStorage([
+export async function handleGetState() {
+  return getStorage([
     STORAGE_KEYS.QUEUE,
     STORAGE_KEYS.CURRENT_INDEX,
     STORAGE_KEYS.PLAYBACK_STATUS,
     STORAGE_KEYS.SCOBBLE_HISTORY,
   ]);
-  sendResponse(data);
+}
+
+/**
+ * Handle CONTENT_READY message
+ */
+export async function handleContentReady(sender) {
+  await setStorage({ 
+    [STORAGE_KEYS.PLAYBACK_STATUS]: 'content_ready', 
+    [STORAGE_KEYS.PLAYBACK_DETAILS]: sender?.tab?.url || '' 
+  });
+  return { ok: true };
+}
+
+/**
+ * Route a message to its handler and return the response object.
+ */
+export async function handleMessage(message, sender) {
+  switch (message?.action) {
+    case 'START_PLAYLIST':
+      return handleStartPlaylist();
+    case 'TRACK_ENDED':
+    case 'NEXT_TRACK':
+      return handleNextTrack();
+    case 'PREV_TRACK':
+      return handlePrevTrack();
+    case 'TOGGLE_PLAY':
+      return handleTogglePlay();
+    case 'MANUAL_SKIP':
+      return handleManualSkip();
+    case 'SCROBBLE':
+      return handleScrobble(message);
+    case 'PLAYBACK_STATUS':
+      return handlePlaybackStatus(message);
+    case 'GET_STATE':
+      return handleGetState();
+    case 'CONTENT_READY':
+      return handleContentReady(sender);
+    default:
+      return { ok: false, error: 'unknown-action' };
+  }
 }
 
 /**
@@ -119,56 +162,16 @@ export async function handleGetState(sendResponse) {
  */
 export function setupMessageListener() {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    const action = message?.action;
-    
-    // Validate sender for content script actions
-    const contentActions = new Set([
-      'TRACK_ENDED', 'NEXT_TRACK', 'SCROBBLE', 'PLAYBACK_STATUS', 'CONTENT_READY'
-    ]);
-    if (contentActions.has(action) && !isPlayerSender(sender, getState().playerTabId)) {
-      sendResponse({ ok: false, error: 'untrusted-sender' });
-      return false;
-    }
-
     (async () => {
       try {
-        switch (action) {
-          case 'START_PLAYLIST':
-            await handleStartPlaylist(sendResponse);
-            break;
-          case 'TRACK_ENDED':
-          case 'NEXT_TRACK':
-            await handleNextTrack(sendResponse);
-            break;
-          case 'PREV_TRACK':
-            await handlePrevTrack(sendResponse);
-            break;
-          case 'TOGGLE_PLAY':
-            await handleTogglePlay(sendResponse);
-            break;
-          case 'MANUAL_SKIP':
-            await handleManualSkip(sendResponse);
-            break;
-          case 'SCROBBLE':
-            await handleScrobble(message, sendResponse);
-            break;
-          case 'PLAYBACK_STATUS':
-            await handlePlaybackStatus(message, sendResponse);
-            break;
-          case 'GET_STATE':
-            await handleGetState(sendResponse);
-            return; // sendResponse called in handler
-          case 'CONTENT_READY':
-            await setStorage({ 
-              [STORAGE_KEYS.PLAYBACK_STATUS]: 'content_ready', 
-              [STORAGE_KEYS.PLAYBACK_DETAILS]: sender.tab.url || '' 
-            });
-            sendResponse({ ok: true });
-            break;
-          default:
-            sendResponse({ ok: false, error: 'unknown-action' });
-            return;
+        const action = message?.action;
+
+        if (CONTENT_ACTIONS.has(action) && !await isTrustedContentSender(sender)) {
+          sendResponse({ ok: false, error: 'untrusted-sender' });
+          return;
         }
+
+        sendResponse(await handleMessage(message, sender));
       } catch (error) {
         sendResponse({ ok: false, error: String(error) });
       }
@@ -177,6 +180,3 @@ export function setupMessageListener() {
     return true; // Async response
   });
 }
-
-// Import state getter (circular dependency workaround)
-import { getState } from './queue.js';

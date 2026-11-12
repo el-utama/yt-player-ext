@@ -256,7 +256,7 @@ Chrome dapat membatasi autoplay audio yang dimulai tanpa interaksi pengguna. Ext
 1. Pastikan hanya satu dedicated player tab yang digunakan.
 2. Periksa item aktif di bagian **Antrean Saat Ini**.
 3. Tunggu sampai navigasi sebelumnya selesai sebelum menekan kontrol lagi.
-4. Reload extension jika service worker baru saja direload.
+4. Jika muncul pesan `Skip gagal: no-player-tab`, buka satu tab `https://music.youtube.com` lalu coba lagi. Extension kini menyelaraskan ulang tab player setiap service worker aktif kembali.
 5. Tutup tab player yang tidak digunakan lalu mulai playlist kembali.
 
 ### Scrobble tidak muncul
@@ -340,6 +340,7 @@ Manifest menggunakan:
 
 - `storage`: menyimpan queue, status, histori scrobble, dan preferensi ukuran popup secara lokal.
 - `tabs`: membuat, mencari, meng-update, dan memantau dedicated player tab.
+- `scripting`: menjeda video lewat `chrome.scripting.executeScript` sebelum navigasi agar dialog "meninggalkan halaman" tidak muncul.
 - Host permission `https://music.youtube.com/*`: mengaktifkan content script hanya pada YouTube Music.
 
 Extension ini tidak menggunakan YouTube Data API dan tidak mengirim histori ke server milik project. Histori disimpan di `chrome.storage.local` sampai pengguna menghapusnya atau profile Chrome dibersihkan.
@@ -575,7 +576,7 @@ Browser autoplay policy can prevent audio playback initiated without a user gest
 
 ### Next or Previous selects the wrong item
 
-Check the active queue item, wait for the previous navigation to finish, and avoid repeated rapid clicks. If the service worker was reloaded, reload the extension and start the playlist again. Close orphaned player tabs if necessary.
+Check the active queue item, wait for the previous navigation to finish, and avoid repeated rapid clicks. If the popup reports `Skip gagal: no-player-tab`, open a `https://music.youtube.com` tab and try again; the extension now reconciles the player tab whenever the service worker wakes up. Close orphaned player tabs if necessary.
 
 ### A scrobble is missing
 
@@ -640,6 +641,7 @@ The manifest uses:
 
 - `storage` for local queue, status, scrobble history, and popup size preference.
 - `tabs` to create, find, update, and monitor the dedicated player tab.
+- `scripting` to pause the video through `chrome.scripting.executeScript` before navigation so the "leave page" dialog never appears.
 - `https://music.youtube.com/*` host permission for the content script.
 
 The extension does not use the YouTube Data API and does not send scrobble history to a project-owned server. History remains in `chrome.storage.local` until the user clears it or the Chrome profile data is removed.

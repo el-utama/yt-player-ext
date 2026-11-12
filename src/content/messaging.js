@@ -3,54 +3,64 @@
 import { state } from './state.js';
 import { selectFirstTrack } from './search.js';
 import { advanceAfterDecision } from './scrobble.js';
-import { sendMessage, reportStatus } from '../shared/messaging.js';
+import { reportStatus } from '../shared/messaging.js';
 
 /**
  * Handle messages from background/popup
  */
 export function setupMessageListener() {
-  chrome.runtime.onMessage.addListener(async (message, _sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (!state.enabled) {
       sendResponse({ ok: false, error: 'extension-disabled' });
       return false;
     }
-    
+
+    const action = message?.action;
     const video = document.querySelector('video');
-    
-    if (message?.action === 'TOGGLE_PLAY' && window.location.pathname.includes('/search')) {
+
+    if (action === 'TOGGLE_PLAY' && window.location.pathname.includes('/search')) {
       selectFirstTrack();
       sendResponse({ ok: true, action: 'resolve_track' });
-    } 
-    else if (message?.action === 'TOGGLE_PLAY' && video) {
+      return false;
+    }
+
+    if (action === 'TOGGLE_PLAY' && video) {
       if (video.paused) {
-        try {
-          await video.play();
-          reportStatus('playing');
-        } catch (error) {
-          reportStatus('autoplay_blocked', error?.name || 'play_failed');
-        }
-      } else {
-        video.pause();
+        video.play()
+          .then(() => {
+            reportStatus('playing');
+            sendResponse({ ok: true });
+          })
+          .catch((error) => {
+            reportStatus('autoplay_blocked', error?.name || 'play_failed');
+            sendResponse({ ok: true });
+          });
+        return true; // Async response
       }
+
+      video.pause();
       sendResponse({ ok: true });
-    } 
-    else if (message?.action === 'TRIGGER_SKIP') {
-      await advanceAfterDecision();
+      return false;
+    }
+
+    if (action === 'TRIGGER_SKIP') {
+      // Reply first: the skip navigates the tab, which would tear down the
+      // message port before a delayed response could be delivered.
       sendResponse({ ok: true });
-      return true;
-    } 
-    else if (message?.action === 'PAUSE') {
-      const video = document.querySelector('video');
+      void advanceAfterDecision();
+      return false;
+    }
+
+    if (action === 'PAUSE') {
       if (video && !video.paused) {
         video.pause();
         reportStatus('paused');
       }
       sendResponse({ ok: true });
-    } 
-    else {
-      sendResponse({ ok: false });
+      return false;
     }
-    
+
+    sendResponse({ ok: false, error: 'unknown-action' });
     return false;
   });
 }

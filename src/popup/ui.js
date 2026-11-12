@@ -34,7 +34,7 @@ export function applyExtensionEnabled(enabled, announce = true) {
   const extensionEnabledLabel = $('extensionEnabledLabel');
   
   const automationControls = [
-    $('songListInput'),
+    $('songList'),
     $('startBtn'),
     $('prevBtn'),
     $('togglePlayBtn'),
@@ -43,6 +43,9 @@ export function applyExtensionEnabled(enabled, announce = true) {
     $('randomEnable'),
     $('randomMin'),
     $('randomMax'),
+    $('adSkipEnable'),
+    $('adSkipMinDelay'),
+    $('adSkipMaxWait'),
   ];
   
   if (extensionEnabled) extensionEnabled.checked = active;
