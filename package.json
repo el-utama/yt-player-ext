@@ -1,0 +1,27 @@
+{
+  "name": "yt-player-ext",
+  "version": "3.2.8",
+  "description": "YT Music Custom Player & Whitelist Scrobbler - Manifest V3 Chrome Extension",
+  "type": "module",
+  "scripts": {
+    "dev": "node esbuild.config.mjs --watch",
+    "build": "NODE_ENV=production node esbuild.config.mjs",
+    "build:dev": "NODE_ENV=development node esbuild.config.mjs",
+    "lint": "eslint src --ext .js",
+    "test": "node --test tests/*.test.js"
+  },
+  "keywords": [
+    "chrome-extension",
+    "youtube-music",
+    "manifest-v3",
+    "scrobbler"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
