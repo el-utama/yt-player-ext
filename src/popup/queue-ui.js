@@ -46,7 +46,7 @@ export async function refreshQueueUI() {
  * Setup start playlist button
  */
 export function setupStartButton() {
-  const songListInput = $('songListInput');
+  const songListInput = $('songList');
   const startBtn = $('startBtn');
   const shuffleEnable = $('shuffleEnable');
   
