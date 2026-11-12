@@ -484,7 +484,7 @@ async function handleNavigation() {
   }
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(async (message, _sender, sendResponse) => {
   if (!state.enabled) {
     sendResponse({ ok: false, error: 'extension-disabled' });
     return false;
@@ -495,14 +495,19 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     sendResponse({ ok: true, action: 'resolve_track' });
   } else if (message?.action === 'TOGGLE_PLAY' && video) {
     if (video.paused) {
-      video.play().then(() => reportStatus('playing'))
-        .catch((error) => reportStatus('autoplay_blocked', error?.name || 'play_failed'));
+      try {
+        await video.play();
+        reportStatus('playing');
+      } catch (error) {
+        reportStatus('autoplay_blocked', error?.name || 'play_failed');
+      }
     } else {
       video.pause();
     }
     sendResponse({ ok: true });
   } else if (message?.action === 'TRIGGER_SKIP') {
-    void advanceAfterDecision().then(() => sendResponse({ ok: true }));
+    await advanceAfterDecision();
+    sendResponse({ ok: true });
     return true;
   } else if (message?.action === 'PAUSE') {
     const video = document.querySelector('video');
