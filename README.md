@@ -2,7 +2,7 @@
 
 Manifest V3 Chrome Extension untuk menjalankan antrean lagu berbasis teks di YouTube Music dan mencatat histori pemutaran lokal secara selektif.
 
-> **Current version:** `3.3.0`
+> **Current version:** `3.4.0`
 
 ## Bahasa / Language
 
@@ -29,12 +29,18 @@ Extension ini menyediakan:
 - Scrobble lokal setelah minimal 30 detik eligible playback.
 - Perlindungan whitelist agar lagu dari artis atau judul yang tidak sesuai tidak dicatat.
 - Penahanan timer ketika iklan terdeteksi.
-- **Durasi acak per lagu** (Min–Max detik) dengan advance otomatis.
-- **Skip iklan otomatis** dengan jeda minimal dan batas tunggu yang dapat diatur.
-- **Acak urutan antrean** (shuffle) saat memulai playlist.
+- **Durasi acak per lagu** (Min–Max detik) dengan advance otomatis — **mode: antrean saja / semua pemutaran native**.
+- **Skip iklan otomatis** dengan jeda minimal dan batas tunggu yang dapat diatur (default ON).
+- **Loop & Shuffle** hanya untuk antrean ekstensi (bag-based shuffle, avoid-repeat, loop one/all/off).
 - Histori lokal dan ekspor CSV.
-- Popup dengan tiga ukuran: S, M, dan L (layout responsif).
+- Popup dengan tiga ukuran: S, M, dan L (layout responsif, 210/280/360 px, max 580 px).
 - **Switch global Aktif/Nonaktif** untuk membiarkan playlist YouTube Music berjalan tanpa intervensi ekstensi (badge "OFF" di ikon toolbar saat nonaktif).
+- **Pengaturan pindah ke Options Page**; popup dibuat ringkas (quick toggles, Now Playing, transport, queue, history).
+- **Now Playing card** di popup (judul, artis, progress, badges, kontrol transport).
+- **Keyboard shortcuts** (Ctrl+Shift+Space Play/Pause, Ctrl+Shift+Left/Right Prev/Next, Ctrl+Shift+A toggle ad-skip).
+- **Sleep timer** (menit / jumlah lagu).
+- **Diagnostics panel** (ring buffer 20 event, copy log).
+- **Export/Import settings** (JSON).
 - **Pencarian dan pemilihan hasil diperbaiki** dengan penanganan *featuring artists*, pemisah artis, dan skor kecocokan yang lebih ketat.
 - **Indikator versi** terlihat di `chrome://extensions`; reload ekstensi setelah setiap update.
 
@@ -67,7 +73,10 @@ Extension ini ditujukan untuk penggunaan pribadi pada `https://music.youtube.com
    content.js
    popup.html
    popup.js
+   options.html
+   options.js
    styles.css
+   options.css
    ```
 
 6. Pastikan extension muncul dengan nama **YT Music Custom Player & Whitelist Scrobbler**.
@@ -78,7 +87,7 @@ Extension ini ditujukan untuk penggunaan pribadi pada `https://music.youtube.com
 
 ### Build dari source
 
-File `background.js`, `content.js`, dan `popup.js` adalah hasil build dan sudah disertakan di repository, sehingga side-load langsung dapat dilakukan. Jika mengubah file di `src/`, jalankan:
+File `background.js`, `content.js`, `popup.js`, dan `options.js` adalah hasil build dan sudah disertakan di repository, sehingga side-load langsung dapat dilakukan. Jika mengubah file di `src/`, jalankan:
 
 ```powershell
 npm install
@@ -373,41 +382,54 @@ Jangan menyimpan credential atau profile Chrome pribadi ke repository.
 
 ```text
 .
-├── manifest.json                 # Manifest V3
+├── manifest.json                 # Manifest V3 (options_ui, commands, minimum_chrome_version: 110)
 ├── background.js                 # Hasil build service worker
 ├── content.js                    # Hasil build content script
 ├── popup.js                      # Hasil build popup
+├── options.js                    # Hasil build options page
 ├── popup.html                    # Markup popup
+├── options.html                  # Markup options page
 ├── styles.css                    # Tema dan layout popup S/M/L
+├── options.css                   # Tema options page
 ├── esbuild.config.mjs            # Konfigurasi build esbuild
+├── eslint.config.js              # ESLint flat config
 ├── src/
-│   ├── shared/                   # constants, utils, messaging
+│   ├── shared/                   # constants, utils, messaging, settings, queue-logic
 │   ├── background/               # bootstrap, queue, tab-manager, scrobble, badge
-│   ├── content/                  # search, player, ad-skip, scrobble, navigation
-│   └── popup/                    # queue-ui, history-ui, settings, ui
+│   ├── content/                  # search, player, ad-skip, scrobble, navigation, now-playing, settings-cache
+│   ├── popup/                    # queue-ui, history-ui, settings, ui, master, now-playing
+│   └── options/                  # index, storage
 ├── tests/
 │   ├── extension-toggle.test.js  # Regression test
-│   └── ad-skip.test.js           # Regression test skip iklan
+│   ├── ad-skip.test.js           # Regression test skip iklan
+│   ├── settings.test.js          # Settings v2 migration/validation
+│   ├── queue-logic.test.js       # Pure queue logic (loop/shuffle/avoid-repeat)
+│   ├── now-playing.test.js       # Now playing snapshot builder
+│   └── options.test.js           # Options page integration
 ├── scripts/
 │   └── ytmusic-dom-audit.js      # Audit selector Puppeteer
 ├── INSTALL_AND_TESTING.md        # Panduan side-load dan E2E
-└── PUPPETEER_DOM_AUDIT.md        # Audit DOM berkala
+├── PUPPETEER_DOM_AUDIT.md        # Audit DOM berkala
+└── .github/workflows/test.yml    # CI: test, build, drift check, release
 ```
 
 ## Permission dan Privasi
 
 Manifest menggunakan:
 
-- `storage`: menyimpan queue, status, histori scrobble, dan preferensi ukuran popup secara lokal.
+- `storage`: menyimpan queue, status, histori scrobble, pengaturan (settings v2), dan preferensi ukuran popup secara lokal.
 - `tabs`: membuat, mencari, meng-update, dan memantau dedicated player tab.
 - `scripting`: menjeda video lewat `chrome.scripting.executeScript` sebelum navigasi agar dialog "meninggalkan halaman" tidak muncul.
 - Host permission `https://music.youtube.com/*`: mengaktifkan content script hanya pada YouTube Music.
+- `commands`: keyboard shortcuts (Play/Pause, Next, Prev, Toggle Ad-Skip).
+
+Extension ini tidak menggunakan YouTube Data API dan tidak mengirim histori ke server milik project. Histori disimpan di `chrome.storage.local` sampai pengguna menghapusnya atau profile Chrome dibersihkan.
 
 Extension ini tidak menggunakan YouTube Data API dan tidak mengirim histori ke server milik project. Histori disimpan di `chrome.storage.local` sampai pengguna menghapusnya atau profile Chrome dibersihkan.
 
 ## Batasan yang Diketahui
 
-- Hanya mendukung Chrome/Chromium Manifest V3.
+- Hanya mendukung Chrome/Chromium Manifest V3 (minimum Chrome 110).
 - Hanya menargetkan `https://music.youtube.com/*`.
 - Tidak mendukung `www.youtube.com` atau layanan musik lain.
 - Tidak ada jaminan autoplay audio karena kebijakan autoplay browser dan kondisi iklan.
@@ -420,8 +442,27 @@ Extension ini tidak menggunakan YouTube Data API dan tidak mengirim histori ke s
 - Scrobble hanya lokal; tidak terhubung ke Last.fm, ListenBrainz, atau layanan eksternal lain.
 - Skip iklan mengandalkan tombol **Skip Ad**; bila YouTube menolak klik otomatis, extension menyelesaikan media iklan (seek/accelerate) dan mengembalikan kecepatan playback setelahnya.
 - Service worker Manifest V3 dapat dihentikan Chrome ketika idle. Extension menyelaraskan ulang tab player setiap service worker aktif kembali, tetapi pengujian restart tetap disarankan.
+- Loop & Shuffle hanya berlaku untuk antrean ekstensi (tidak memengaruhi playlist/radio native YouTube Music).
+- Random native memerlukan tombol Next milik YouTube Music; jika tidak ditemukan fallback seek ke akhir video.
+- Humanisasi scroll tidak diimplementasikan (bukan sinyal stream count, risiko ToS).
 
 ## Riwayat Perubahan
+
+### 3.4.0
+
+- **Settings v2 (nested `settings` object)** — single source of truth dengan migrasi otomatis dari flat keys 3.3.0; dual-write legacy keys selama 3.4.x untuk kompatibilitas mundur tab lama.
+- **Options Page lengkap** — General, Ads, Random, Queue, Sleep Timer, Diagnostics, Data (Export/Import/Reset), About; validasi inline, auto-save debounce, toast notifikasi.
+- **Popup diringkas** — 3 tab (Player / Antrean / Histori), Now Playing card dengan progress bar & badges, quick toggles (Ad-Skip, Random mode cycle, Shuffle, Loop cycle), settings gear membuka Options Page.
+- **Now Playing pipeline** — content script mengirim throttled snapshot (2s heartbeat, on-change) ke `chrome.storage.session` (fallback local); popup membaca via `storage.onChanged` (tanpa polling).
+- **Random native** — `randomWatch.mode: off | queue | all`; mode `all` klik tombol Next native YouTube Music, fallback `seek(duration - 0.25)`.
+- **Loop & Shuffle (antrean ekstensi saja)** — bag-based shuffle (display order preserved), `loop: off | all | one`, `avoidRepeat` (0–50), `navHistory` untuk Previous; loop-one memutar ulang video sama dengan `sessionId` baru.
+- **Keyboard shortcuts** — `Ctrl+Shift+Space` Play/Pause, `Ctrl+Shift+Right/Left` Next/Prev, `Ctrl+Shift+A` Toggle Ad-Skip; `chrome.commands.onCommand` di background.
+- **Sleep Timer** — mode `minutes` (eligible seconds) / `tracks`; selesai → pause + status `sleep_timer_done`.
+- **Diagnostics panel** — ring buffer 20 event di session storage, tombol Salin log, counter ad-skip/scrobble/random/native.
+- **Export/Import settings** — JSON `{schema, exportedAt, settings}`; import memvalidasi + clamp; histori tetap CSV.
+- **Popup size fix** — atribut `data-popup-size` di `<html>` (bukan `body`); S 210px, M 280px, L 360px, max-height 580px internal scroll.
+- **Highlight bug fix** — class `is-current` (bukan `current` vs `.active-track` mismatch).
+- **CI + build-drift check** — GitHub Actions workflow: test, lint, build, artifact diff check; release ZIP + SHA256.
 
 ### 3.3.0
 
@@ -501,7 +542,10 @@ The extension is intended for personal use on `https://music.youtube.com`.
    content.js
    popup.html
    popup.js
+   options.html
+   options.js
    styles.css
+   options.css
    ```
 
 6. Confirm that **YT Music Custom Player & Whitelist Scrobbler** appears.

@@ -38,9 +38,12 @@ function badgeFor(enabled) {
 
 test('manifest version and MV3 action are present', () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, '3.3.0');
+  assert.equal(manifest.version, '3.4.0');
   assert.ok(manifest.action, 'manifest.action must exist for badge support');
   assert.ok(manifest.permissions.includes('scripting'), 'scripting permission is required by pausePlayer()');
+  assert.ok(manifest.options_ui, 'options_ui must be present');
+  assert.ok(manifest.commands, 'commands must be present');
+  assert.equal(manifest.minimum_chrome_version, '110');
 });
 
 test('background reconciles the player tab on every service worker start', () => {
@@ -65,9 +68,12 @@ test('manual skip reports delivery failure instead of silently succeeding', () =
 });
 
 test('popup exposes a persistent global switch', () => {
-  assert.match(popupHtml, /id="extensionEnabled"/);
-  assert.match(popupHtml, /id="extensionEnabledLabel"/);
-  assert.match(popupQueueUI, /extensionEnabled/);
+  assert.match(popupHtml, /id="masterEnabled"/);
+  assert.match(popupHtml, /id="masterLabel"/);
+  assert.match(popupHtml, /role="switch"/);
+  // master.js handles the new settings-based master switch
+  const popupMaster = read('src/popup/master.js');
+  assert.match(popupMaster, /masterEnabled/);
   assert.match(popupUI, /applyExtensionEnabled/);
   assert.match(stylesCss, /\.switch-slider/);
 });

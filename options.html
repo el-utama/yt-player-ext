@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="options.css">
+  <title>YT Music Scrobbler — Pengaturan</title>
+</head>
+<body>
+  <header>
+    <h1>YT Music Scrobbler</h1>
+    <p class="subtitle">Pengaturan ekstensi</p>
+  </header>
+
+  <main>
+    <nav class="sidenav" aria-label="Kategori pengaturan">
+      <button type="button" class="sidenav-item active" data-section="general">Umum</button>
+      <button type="button" class="sidenav-item" data-section="ads">Iklan</button>
+      <button type="button" class="sidenav-item" data-section="random">Random</button>
+      <button type="button" class="sidenav-item" data-section="queue">Antrean</button>
+      <button type="button" class="sidenav-item" data-section="sleep">Sleep Timer</button>
+      <button type="button" class="sidenav-item" data-section="diagnostics">Diagnostik</button>
+      <button type="button" class="sidenav-item" data-section="data">Data</button>
+      <button type="button" class="sidenav-item" data-section="about">Tentang</button>
+    </nav>
+
+    <div class="content" role="main">
+      <!-- General -->
+      <section id="section-general" class="section active" aria-labelledby="general-title">
+        <h2 id="general-title">Umum</h2>
+        <fieldset>
+          <legend>Kontrol Utama</legend>
+          <label class="field">
+            <input id="optMasterEnabled" type="checkbox" role="switch">
+            <span>Aktifkan kontrol ekstensi</span>
+            <span class="field-hint">Matikan untuk menghentikan semua otomatisasi (scrobble, random, ad-skip, antrean)</span>
+          </label>
+        </fieldset>
+        <fieldset>
+          <legend>Ukuran Popup</legend>
+          <div class="radio-group" role="radiogroup" aria-label="Ukuran popup">
+            <label><input type="radio" name="popupSize" value="small"> Kecil (210px)</label>
+            <label><input type="radio" name="popupSize" value="medium"> Sedang (280px)</label>
+            <label><input type="radio" name="popupSize" value="large"> Besar (360px)</label>
+          </div>
+        </fieldset>
+        <div class="actions">
+          <button id="optOpenYTM" type="button">Buka YouTube Music</button>
+          <button id="optReloadExt" type="button">Reload Ekstensi</button>
+        </div>
+      </section>
+
+      <!-- Ads -->
+      <section id="section-ads" class="section" aria-labelledby="ads-title">
+        <h2 id="ads-title">Iklan</h2>
+        <fieldset>
+          <legend>Skip Otomatis</legend>
+          <label class="field">
+            <input id="optAdSkipEnabled" type="checkbox" role="switch">
+            <span>Aktifkan skip iklan otomatis</span>
+            <span class="field-hint">Mencari dan mengeklik tombol "Lewati iklan" setelah delay minimal</span>
+          </label>
+        </fieldset>
+        <fieldset>
+          <legend>Timing (ms)</legend>
+          <div class="field-row">
+            <label class="field">
+              <span>Min Delay</span>
+              <input id="optAdSkipMinDelay" type="number" min="0" max="60000" step="100">
+              <span class="field-hint">Jeda sebelum coba skip pertama kali</span>
+            </label>
+            <label class="field">
+              <span>Max Wait</span>
+              <input id="optAdSkipMaxWait" type="number" min="0" max="120000" step="1000">
+              <span class="field-hint">Setelah ini dianggap paksa (seek/accelerate)</span>
+            </label>
+          </div>
+        </fieldset>
+      </section>
+
+      <!-- Random -->
+      <section id="section-random" class="section" aria-labelledby="random-title">
+        <h2 id="random-title">Random Menonton</h2>
+        <fieldset>
+          <legend>Mode</legend>
+          <div class="radio-group" role="radiogroup" aria-label="Mode random">
+            <label><input type="radio" name="randomMode" value="off"> Mati</label>
+            <label><input type="radio" name="randomMode" value="queue"> Hanya antrean ekstensi</label>
+            <label><input type="radio" name="randomMode" value="all"> Semua pemutaran (termasuk native)</label>
+          </div>
+          <p class="field-hint" style="margin-top: 8px;">
+            <strong>antrean ekstensi:</strong> otomatis skip ke lagu berikutnya dari antrean Anda.<br>
+            <strong>semua pemutaran:</strong> klik tombol Next milik YouTube Music (fallback seek ke akhir video).
+          </p>
+        </fieldset>
+        <fieldset>
+          <legend>Durasi Target (detik)</legend>
+          <div class="field-row">
+            <label class="field">
+              <span>Minimum</span>
+              <input id="optRandomMin" type="number" min="0" max="3600" step="1">
+            </label>
+            <label class="field">
+              <span>Maksimum</span>
+              <input id="optRandomMax" type="number" min="0" max="3600" step="1">
+            </label>
+          </div>
+          <p class="field-hint">Durasi acak dipilih per lagu. Min ≤ Max. 0 = tidak dibatasi.</p>
+        </fieldset>
+      </section>
+
+      <!-- Queue -->
+      <section id="section-queue" class="section" aria-labelledby="queue-title">
+        <h2 id="queue-title">Antrean Ekstensi</h2>
+        <fieldset>
+          <legend>Shuffle & Loop</legend>
+          <label class="field">
+            <input id="optQueueShuffle" type="checkbox" role="switch">
+            <span>Aktifkan shuffle (acak urutan)</span>
+            <span class="field-hint">Menggunakan algoritma "bag" — urutan tampilan tidak berubah, hanya urutan pemutaran</span>
+          </label>
+          <div class="field-row">
+            <label class="field">
+              <span>Loop mode</span>
+              <select id="optQueueLoop">
+                <option value="off">Mati</option>
+                <option value="all">Semua (ulang dari awal)</option>
+                <option value="one">Satu (ulang lagu sama)</option>
+              </select>
+              <span class="field-hint">Loop satu memutar ulang video yang sama dengan session ID baru</span>
+            </label>
+          </div>
+          <label class="field">
+            <span>Avoid repeat</span>
+            <input id="optQueueAvoidRepeat" type="number" min="0" max="50" step="1" value="0">
+            <span class="field-hint">Jumlah lagu terakhir yang tidak diulang saat shuffle (0 = mati, disarankan 5–10)</span>
+          </label>
+        </fieldset>
+        <fieldset>
+          <legend>Perilaku</legend>
+          <label class="field">
+            <input id="optEnforceQueue" type="checkbox" role="switch" checked>
+            <span>Paksa pemutaran antrean (blokir radio native)</span>
+            <span class="field-hint">Deteksi dan hentikan autoplay radio YouTube saat antrean ekstensi aktif</span>
+          </label>
+        </fieldset>
+      </section>
+
+      <!-- Sleep Timer -->
+      <section id="section-sleep" class="section" aria-labelledby="sleep-title">
+        <h2 id="sleep-title">Sleep Timer</h2>
+        <fieldset>
+          <legend>Mode</legend>
+          <div class="radio-group" role="radiogroup" aria-label="Mode sleep timer">
+            <label><input type="radio" name="sleepMode" value="off"> Mati</label>
+            <label><input type="radio" name="sleepMode" value="minutes"> Berdasarkan menit (detik memutar yang layak)</label>
+            <label><input type="radio" name="sleepMode" value="tracks"> Berdasarkan jumlah lagu</label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Nilai</legend>
+          <div class="field-row">
+            <label class="field">
+              <span>Menit</span>
+              <input id="optSleepMinutes" type="number" min="1" max="1440" step="1" value="30">
+            </label>
+            <label class="field">
+              <span>Jumlah lagu</span>
+              <input id="optSleepTracks" type="number" min="1" max="999" step="1" value="10">
+            </label>
+          </div>
+          <p class="field-hint">Timer berbasis "detik memutar yang layak" (pause/iklan tidak dihitung). Saat habis: pause + status sleep_timer_done.</p>
+        </fieldset>
+      </section>
+
+      <!-- Diagnostics -->
+      <section id="section-diagnostics" class="section" aria-labelledby="diagnostics-title">
+        <h2 id="diagnostics-title">Diagnostik</h2>
+        <fieldset>
+          <legend>Log</legend>
+          <label class="field">
+            <input id="optDiagnosticsVerbose" type="checkbox" role="switch">
+            <span>Log detail (verbose)</span>
+            <span class="field-hint">Simpan 20 event terakhir ke session storage</span>
+          </label>
+        </fieldset>
+        <div class="actions">
+          <button id="optCopyDiagnostics" type="button">Salin Log ke Clipboard</button>
+          <button id="optClearDiagnostics" type="button">Bersihkan Log</button>
+        </div>
+        <div id="diagnosticsPreview" class="diagnostics-preview" aria-live="polite"></div>
+      </section>
+
+      <!-- Data -->
+      <section id="section-data" class="section" aria-labelledby="data-title">
+        <h2 id="data-title">Data</h2>
+        <fieldset>
+          <legend>Export / Import</legend>
+          <div class="actions">
+            <button id="optExportSettings" type="button">Export Pengaturan (JSON)</button>
+            <button id="optExportHistory" type="button">Export Histori (CSV)</button>
+          </div>
+          <label class="field" style="margin-top: 12px;">
+            <span>Import Pengaturan</span>
+            <input id="optImportFile" type="file" accept=".json" style="display:none;">
+            <button id="optImportBtn" type="button" style="width:auto;">Pilih File JSON…</button>
+            <span class="field-hint">File JSON dengan skema {schema, exportedAt, settings}. Validasi otomatis.</span>
+          </label>
+        </fieldset>
+        <fieldset>
+          <legend>Reset</legend>
+          <div class="actions">
+            <button id="optResetSettings" type="button" class="danger">Reset Pengaturan ke Default</button>
+            <button id="optClearHistory" type="button" class="danger">Hapus Histori Scrobble</button>
+          </div>
+        </fieldset>
+      </section>
+
+      <!-- About -->
+      <section id="section-about" class="section" aria-labelledby="about-title">
+        <h2 id="about-title">Tentang</h2>
+        <dl class="about-grid">
+          <dt>Versi</dt><dd id="aboutVersion">—</dd>
+          <dt>Manifest</dt><dd>V3</dd>
+          <dt>Baseline Stabil</dt><dd>v3.3.0 (tag <code>v3.3.0</code>)</dd>
+          <dt>Minimum Chrome</dt><dd>110</dd>
+        </dl>
+        <div class="actions" style="margin-top: 16px;">
+          <button id="optViewChangelog" type="button">Lihat Changelog</button>
+          <button id="optViewSource" type="button">Kode Sumber (GitHub)</button>
+        </div>
+        <p class="field-hint" style="margin-top: 16px;">
+          Hotfix dari baseline stabil dilakukan di branch <code>stable/3.3.0</code>.
+          Fitur baru dikembangkan di <code>main</code> untuk rilis 3.4.0/3.5.0.
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <p>YT Music Scrobbler &copy; 2024–2026 — <a href="https://github.com/el-utama/yt-player-ext" target="_blank" rel="noopener">GitHub</a></p>
+  </footer>
+
+  <script src="options.js"></script>
+</body>
+</html>

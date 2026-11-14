@@ -24,7 +24,7 @@ export function parseTrackQuery(expectedQuery) {
   const separator = raw.lastIndexOf(' - ');
   const title = separator > 0 ? raw.slice(0, separator) : raw;
   const artistText = separator > 0 ? raw.slice(separator + 3) : '';
-  
+
   const artists = artistText
     .replace(FEATURING_WORDS, '|')
     .split(ARTIST_SEPARATOR)
@@ -34,12 +34,12 @@ export function parseTrackQuery(expectedQuery) {
       .replace(/\s+/g, ' ')
       .trim())
     .filter((part, index, list) => part.length >= 2 && list.indexOf(part) === index);
-  
-  return { 
-    raw, 
-    title: normalizeText(title), 
-    artistText: normalizeText(artistText), 
-    artists 
+
+  return {
+    raw,
+    title: normalizeText(title),
+    artistText: normalizeText(artistText),
+    artists,
   };
 }
 
@@ -59,12 +59,12 @@ export function artistTokens(value) {
 export function isWhitelisted(currentTitle, expectedQuery) {
   const title = normalizeText(currentTitle);
   const parsed = parseTrackQuery(expectedQuery);
-  
+
   if (!title || !parsed.title) return false;
-  
-  const titleWords = parsed.title.split(/[\s\-]+/).filter((word) => word.length >= 2);
+
+  const titleWords = parsed.title.split(/[\s-]+/).filter((word) => word.length >= 2);
   const titleMatches = titleWords.filter((word) => title.includes(word)).length;
-  
+
   return titleWords.length === 1
     ? titleMatches === 1
     : titleMatches >= Math.min(2, titleWords.length);
@@ -92,23 +92,23 @@ export function getTrackIdentity(video, title) {
 export function scoreSearchResult(text, expectedQuery) {
   const candidate = normalizeText(text);
   const parsed = parseTrackQuery(expectedQuery);
-  
-  const titleTokens = parsed.title.split(/[\s\-]+/).filter((word) => word.length >= 2);
+
+  const titleTokens = parsed.title.split(/[\s-]+/).filter((word) => word.length >= 2);
   const expectedArtistTokens = [...new Set(parsed.artists.flatMap(artistTokens))];
-  
+
   const titleMatches = titleTokens.filter((token) => candidate.includes(token)).length;
   const artistMatches = expectedArtistTokens.filter((token) => candidate.includes(token)).length;
-  
+
   const titleExact = Boolean(parsed.title && candidate.includes(parsed.title));
   const artistExact = parsed.artists.length > 0 && parsed.artists.every(
-    (artist) => candidate.includes(normalizeText(artist))
+    (artist) => candidate.includes(normalizeText(artist)),
   );
-  
+
   const artistMatch = !parsed.artists.length || parsed.artists.every((artist) => {
     const tokens = artistTokens(artist);
     return tokens.length > 0 && tokens.some((token) => candidate.includes(token));
   });
-  
+
   return {
     score: (titleExact ? 1000000000 : 0)
       + (artistExact ? 1000000 : 0)
@@ -150,7 +150,7 @@ export function isValidTrackInfo(trackInfo) {
     typeof trackInfo.title === 'string' && trackInfo.title.length > 0 && trackInfo.title.length <= 500 &&
     typeof trackInfo.url === 'string' && trackInfo.url.startsWith('https://music.youtube.com') &&
     Number.isFinite(trackInfo.timestamp) &&
-    typeof trackInfo.sessionId === 'string' && trackInfo.sessionId.length <= 120
+    typeof trackInfo.sessionId === 'string' && trackInfo.sessionId.length <= 120,
   );
 }
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YT Music Custom Player & Whitelist Scrobbler",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "Pemutar antrean YT Music dari catatan teks dengan whitelist scrobbler lokal.",
   "permissions": [
     "storage",
@@ -15,6 +15,28 @@
     "default_title": "YT Music Scrobbler",
     "default_popup": "popup.html"
   },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "commands": {
+    "toggle-play": {
+      "suggested_key": { "default": "Ctrl+Shift+Space" },
+      "description": "Play / Pause"
+    },
+    "next-track": {
+      "suggested_key": { "default": "Ctrl+Shift+Right" },
+      "description": "Lagu berikutnya"
+    },
+    "prev-track": {
+      "suggested_key": { "default": "Ctrl+Shift+Left" },
+      "description": "Lagu sebelumnya"
+    },
+    "toggle-ad-skip": {
+      "suggested_key": { "default": "Ctrl+Shift+A" },
+      "description": "Toggle skip iklan otomatis"
+    }
+  },
   "background": {
     "service_worker": "background.js"
   },
@@ -25,5 +47,6 @@
       "run_at": "document_idle",
       "all_frames": false
     }
-  ]
+  ],
+  "minimum_chrome_version": "110"
 }

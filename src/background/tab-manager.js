@@ -8,21 +8,21 @@ import { STORAGE_KEYS } from './storage.js';
  */
 export async function reconcilePlayerTab(getStorageFn) {
   const saved = await getStorageFn([STORAGE_KEYS.PLAYER_TAB_ID]);
-  const candidateId = Number.isInteger(saved[STORAGE_KEYS.PLAYER_TAB_ID]) 
-    ? saved[STORAGE_KEYS.PLAYER_TAB_ID] 
+  const candidateId = Number.isInteger(saved[STORAGE_KEYS.PLAYER_TAB_ID])
+    ? saved[STORAGE_KEYS.PLAYER_TAB_ID]
     : null;
 
   if (candidateId !== null) {
-    const tab = await new Promise((resolve) => 
-      chrome.tabs.get(candidateId, (result) => resolve(chrome.runtime.lastError ? null : result))
+    const tab = await new Promise((resolve) =>
+      chrome.tabs.get(candidateId, (result) => resolve(chrome.runtime.lastError ? null : result)),
     );
     if (tab?.url?.startsWith(PLAYER_ORIGIN)) {
       return tab;
     }
   }
 
-  const tabs = await new Promise((resolve) => 
-    chrome.tabs.query({ url: `${PLAYER_ORIGIN}/*` }, resolve)
+  const tabs = await new Promise((resolve) =>
+    chrome.tabs.query({ url: `${PLAYER_ORIGIN}/*` }, resolve),
   );
   const existing = tabs.find((tab) => Number.isInteger(tab.id));
   return existing || null;
@@ -35,8 +35,8 @@ export async function getOrCreatePlayerTab(getStorageFn, setStorageFn) {
   const existing = await reconcilePlayerTab(getStorageFn);
   if (existing) return existing;
 
-  const tab = await new Promise((resolve) => 
-    chrome.tabs.create({ url: PLAYER_ORIGIN, active: true }, resolve)
+  const tab = await new Promise((resolve) =>
+    chrome.tabs.create({ url: PLAYER_ORIGIN, active: true }, resolve),
   );
   await setStorageFn({ [STORAGE_KEYS.PLAYER_TAB_ID]: tab.id });
   return tab;
@@ -74,9 +74,9 @@ export async function pausePlayer(tabId) {
 export function onTabRemoved(tabId, state, setStorageFn) {
   if (tabId === state.playerTabId) {
     state.playerTabId = null;
-    void setStorageFn({ 
-      [STORAGE_KEYS.PLAYER_TAB_ID]: null, 
-      [STORAGE_KEYS.PLAYBACK_STATUS]: 'idle' 
+    void setStorageFn({
+      [STORAGE_KEYS.PLAYER_TAB_ID]: null,
+      [STORAGE_KEYS.PLAYBACK_STATUS]: 'idle',
     });
   }
 }

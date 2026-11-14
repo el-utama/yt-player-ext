@@ -7,7 +7,7 @@ const commonConfig = {
   bundle: true,
   format: 'iife',
   platform: 'browser',
-  target: 'chrome100',
+  target: 'chrome110',
   sourcemap: true,
   banner: { js: 'var chrome = chrome || {};' },
   define: {
@@ -24,6 +24,7 @@ async function buildAll() {
     { ...commonConfig, entryPoints: ['src/background/bootstrap.js'], outfile: 'background.js', globalName: 'background' },
     { ...commonConfig, entryPoints: ['src/content/index.js'], outfile: 'content.js', globalName: 'content' },
     { ...commonConfig, entryPoints: ['src/popup/index.js'], outfile: 'popup.js', globalName: 'popup' },
+    { ...commonConfig, entryPoints: ['src/options/index.js'], outfile: 'options.js', globalName: 'options' },
   ];
 
   if (isWatch) {

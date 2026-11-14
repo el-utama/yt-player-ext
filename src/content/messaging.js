@@ -3,7 +3,9 @@
 import { state } from './state.js';
 import { selectFirstTrack } from './search.js';
 import { advanceAfterDecision } from './scrobble.js';
+import { clickNativeNext, clickNativePrev } from './dom.js';
 import { reportStatus } from '../shared/messaging.js';
+import { reportNowPlaying } from './now-playing.js';
 
 /**
  * Handle messages from background/popup
@@ -57,6 +59,31 @@ export function setupMessageListener() {
         reportStatus('paused');
       }
       sendResponse({ ok: true });
+      return false;
+    }
+
+    if (action === 'REPLAY_TRACK') {
+      if (!video) {
+        sendResponse({ ok: false, error: 'video-not-found' });
+        return false;
+      }
+      state.scrobbled = false;
+      state.eligibleSeconds = 0;
+      try {
+        video.currentTime = 0;
+        video.play().catch(() => undefined);
+        reportStatus('replay_track');
+        reportNowPlaying(true);
+        sendResponse({ ok: true });
+      } catch (_error) {
+        sendResponse({ ok: false, error: 'replay-failed' });
+      }
+      return false;
+    }
+
+    if (action === 'NATIVE_NEXT' || action === 'NATIVE_PREV') {
+      const clicked = action === 'NATIVE_NEXT' ? clickNativeNext() : clickNativePrev();
+      sendResponse(clicked ? { ok: true } : { ok: false, error: 'native-control-not-found' });
       return false;
     }
 

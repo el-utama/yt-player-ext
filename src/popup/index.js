@@ -1,41 +1,59 @@
 // Popup Entry Point - Initialize all popup modules
 
-import { refreshQueueUI, setupStartButton, setupPlaybackControls, setupExtensionToggle } from './queue-ui.js';
+import { refreshQueueUI, setupStartButton, setupPlaybackControls, setupQueueEditor } from './queue-ui.js';
 import { loadHistory, setupClearHistory, setupExportCsv } from './history-ui.js';
-import { setupShuffle, setupRandomDuration, setupAdSkip, setupPopupSize } from './settings.js';
-import { showTab } from './ui.js';
+import { setupQuickToggles, setupSizeSelector, setupOptionsButton, setupTabs } from './settings.js';
+import { setupNowPlaying } from './now-playing.js';
+import { setupMasterToggle } from './master.js';
+import { $, setStatus, applyExtensionEnabled } from './ui.js';
 import { getStorage, STORAGE_KEYS } from './storage.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Tab navigation
-  const tabPlaylistBtn = $('tabPlaylistBtn');
-  const tabHistoryBtn = $('tabHistoryBtn');
-  
-  tabPlaylistBtn?.addEventListener('click', () => showTab(false));
-  tabHistoryBtn?.addEventListener('click', () => showTab(true));
-  
-  // Initialize all modules
-  setupStartButton();
+  // Master switch (must be first so other modules can react)
+  setupMasterToggle();
+
+  // Tabs
+  setupTabs();
+
+  // Now Playing card
+  setupNowPlaying();
+
+  // Quick toggles (ad-skip, random mode, shuffle, loop)
+  setupQuickToggles();
+
+  // Queue editor (song list + start button)
+  setupQueueEditor();
+
+  // Size selector
+  setupSizeSelector();
+
+  // Options page button
+  setupOptionsButton();
+
+  // Playback controls (in now-playing card)
   setupPlaybackControls();
-  setupExtensionToggle();
-  setupShuffle();
-  setupRandomDuration();
-  setupAdSkip();
-  setupPopupSize();
-  
+
   // History tab
   loadHistory();
   setupClearHistory();
   setupExportCsv();
-  
+
   // Initial queue UI refresh
   refreshQueueUI();
-  
+
   // Auto-refresh queue UI periodically
   setInterval(refreshQueueUI, 2000);
-});
 
-// Helper to get element by ID
-function $(id) {
-  return document.getElementById(id);
-}
+  // Initial status load
+  getStorage([STORAGE_KEYS.PLAYBACK_STATUS, STORAGE_KEYS.EXTENSION_ENABLED])
+    .then(({ playbackStatus, extensionEnabled }) => {
+      if (extensionEnabled === false) {
+        applyExtensionEnabled(false);
+        setStatus('Ekstensi nonaktif — playback YT Music tidak diganggu');
+      } else if (playbackStatus) {
+        setStatus(`Status: ${playbackStatus}`);
+      } else {
+        setStatus('Siap');
+      }
+    });
+});

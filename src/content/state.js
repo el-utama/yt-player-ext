@@ -22,10 +22,30 @@ export const state = {
   playAttemptedIdentity: '',
   playAttemptedAt: 0,
   lastDecisionKey: '',
+
+  // Settings cache (see settings-cache.js). The tick loop must never touch
+  // chrome.storage directly for configuration.
+  settings: null,
+  settingsReady: false,
+  playbackMode: 'native',
+  expectedQuery: '',
+  currentSessionId: '',
+  loopMode: 'off',
+  shuffleEnabled: false,
+
+  // Random watch timer
+  randomWatchMode: 'off',
   randomEnabled: false,
   randomMinSeconds: 0,
   randomMaxSeconds: 0,
   randomTargetSeconds: 0,
+  lastRandomAdvanceAt: 0,
+
+  // Now playing throttle
+  nowPlayingSignature: '',
+  nowPlayingSentAt: 0,
+
+  // Ad-skip
   adSkipEnabled: true,
   adSkipMinDelay: 5000,
   adSkipMaxWait: 30000,
@@ -42,11 +62,29 @@ export const state = {
 };
 
 /**
+ * Pick a random target for the current track. Returns 0 when random watch is
+ * disabled or misconfigured so callers can treat 0 as "no target".
+ */
+export function pickRandomTargetSeconds({
+  mode = state.randomWatchMode,
+  minSeconds = state.randomMinSeconds,
+  maxSeconds = state.randomMaxSeconds,
+} = {}) {
+  if (mode === 'off') return 0;
+
+  const max = Math.max(0, Number(maxSeconds) || 0);
+  if (max <= 0) return 0;
+
+  const min = Math.min(Math.max(0, Number(minSeconds) || 0), max);
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+/**
  * Reset track state for new track
  */
-export function resetTrackState(identity, sessionId, randomConfig = {}) {
+export function resetTrackState(identity, sessionId) {
   if (state.lastTrackIdentity === identity && state.sessionId === sessionId) return;
-  
+
   state.lastTrackIdentity = identity;
   state.sessionId = sessionId || generateSessionId(0);
   state.eligibleSeconds = 0;
@@ -61,21 +99,8 @@ export function resetTrackState(identity, sessionId, randomConfig = {}) {
   // the minDelay restart and delayed/skipped the click. Ad-skip state is
   // driven only by ad start/end transitions in ad-skip.js.
 
-  // Random duration config
-  state.randomEnabled = Boolean(randomConfig.randomEnabled);
-  state.randomMinSeconds = Number.isFinite(randomConfig.randomMinSeconds) 
-    ? Math.max(0, randomConfig.randomMinSeconds) 
-    : 0;
-  state.randomMaxSeconds = Number.isFinite(randomConfig.randomMaxSeconds) 
-    ? Math.max(0, randomConfig.randomMaxSeconds) 
-    : 0;
-  state.randomTargetSeconds = 0;
-  
-  if (state.randomEnabled && state.randomMaxSeconds > 0) {
-    const min = Math.min(state.randomMinSeconds, state.randomMaxSeconds);
-    const max = state.randomMaxSeconds;
-    state.randomTargetSeconds = Math.floor(Math.random() * (max - min + 1)) + min;
-  }
+  state.randomEnabled = state.randomWatchMode !== 'off';
+  state.randomTargetSeconds = pickRandomTargetSeconds();
 }
 
 /**

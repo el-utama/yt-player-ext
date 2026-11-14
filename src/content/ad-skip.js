@@ -1,7 +1,7 @@
 // Content Ad-Skip - Automatic ad skipping for YouTube Music
 
 import { state } from './state.js';
-import { storageGet } from './storage.js';
+import { loadSettings, SETTINGS_KEY } from '../shared/settings.js';
 import { AD_SKIP_DEFAULTS } from '../shared/constants.js';
 import {
   findSkipButton,
@@ -209,7 +209,7 @@ export function checkAndSkipAd(video, adOverride) {
       state.adSkipAttemptCount += 1;
       reportStatus(
         forced ? 'ad_skip_forced' : 'ad_skip_attempted',
-        `method=click elapsed=${elapsed}ms attempt=${state.adSkipAttemptCount}${badge ? ` badge="${badge}"` : ''}`
+        `method=click elapsed=${elapsed}ms attempt=${state.adSkipAttemptCount}${badge ? ` badge="${badge}"` : ''}`,
       );
     }
     return;
@@ -240,19 +240,15 @@ function toDelay(value, fallback) {
 }
 
 /**
- * Update ad-skip config from storage
+ * Update ad-skip config from the shared settings object.
  */
 export async function updateAdSkipConfig() {
-  const config = await storageGet([
-    'adSkipEnabled',
-    'adSkipMinDelay',
-    'adSkipMaxWait',
-  ]);
+  const settings = await loadSettings();
 
-  state.adSkipEnabled = config.adSkipEnabled !== false;
+  state.adSkipEnabled = settings.adSkip.enabled;
 
-  const minDelay = toDelay(config.adSkipMinDelay, AD_SKIP_DEFAULTS.minDelay);
-  const maxWait = toDelay(config.adSkipMaxWait, AD_SKIP_DEFAULTS.maxWait);
+  const minDelay = toDelay(settings.adSkip.minDelay, AD_SKIP_DEFAULTS.minDelay);
+  const maxWait = toDelay(settings.adSkip.maxWait, AD_SKIP_DEFAULTS.maxWait);
 
   state.adSkipMinDelay = minDelay;
   // A "force" point before the first attempt is meaningless; keep it sane.
@@ -267,11 +263,7 @@ export async function initAdSkipConfig() {
 
   // Listen for config changes
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === 'local' && (
-      changes.adSkipEnabled ||
-      changes.adSkipMinDelay ||
-      changes.adSkipMaxWait
-    )) {
+    if (areaName === 'local' && changes[SETTINGS_KEY]) {
       void updateAdSkipConfig();
     }
   });

@@ -1,6 +1,7 @@
 // Background Storage - Chrome storage wrapper with keys
 
 import { storageGet, storageSet } from '../shared/messaging.js';
+import { loadSettings } from '../shared/settings.js';
 
 // Storage keys
 export const STORAGE_KEYS = {
@@ -22,6 +23,12 @@ export const STORAGE_KEYS = {
   AD_SKIP_ENABLED: 'adSkipEnabled',
   AD_SKIP_MIN_DELAY: 'adSkipMinDelay',
   AD_SKIP_MAX_WAIT: 'adSkipMaxWait',
+  SETTINGS: 'settings',
+  SHUFFLE_BAG: 'shuffleBag',
+  NAV_HISTORY: 'navHistory',
+  NOW_PLAYING: 'nowPlaying',
+  DIAGNOSTICS: 'diagnostics',
+  SLEEP_TRACKS_PLAYED: 'sleepTracksPlayed',
 };
 
 /**
@@ -54,11 +61,11 @@ export async function set(key, value) {
 }
 
 /**
- * Check if extension is enabled
+ * Check if extension is enabled (reads the v2 settings object).
  */
 export async function isExtensionEnabled() {
-  const data = await storageGet([STORAGE_KEYS.EXTENSION_ENABLED]);
-  return data[STORAGE_KEYS.EXTENSION_ENABLED] !== false;
+  const settings = await loadSettings();
+  return settings.masterEnabled !== false;
 }
 
 /**

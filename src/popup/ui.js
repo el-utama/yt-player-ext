@@ -19,60 +19,51 @@ export function setStatus(text, isError = false) {
 }
 
 /**
- * Apply popup size (S/M/L)
+ * Apply popup size (S/M/L) to the <html> element
  */
 export function applyPopupSize(size) {
-  document.body.dataset.popupSize = size;
+  document.documentElement.dataset.popupSize = size;
 }
 
 /**
  * Apply extension enabled/disabled state to UI
  */
-export function applyExtensionEnabled(enabled, announce = true) {
+export function applyExtensionEnabled(enabled) {
   const active = Boolean(enabled);
-  const extensionEnabled = $('extensionEnabled');
-  const extensionEnabledLabel = $('extensionEnabledLabel');
-  
+  const masterEnabled = $('masterEnabled');
+  const masterLabel = $('masterLabel');
+  const masterHint = $('masterHint');
+
   const automationControls = [
-    $('songList'),
-    $('startBtn'),
-    $('prevBtn'),
-    $('togglePlayBtn'),
-    $('nextBtn'),
-    $('shuffleEnable'),
-    $('randomEnable'),
-    $('randomMin'),
-    $('randomMax'),
     $('adSkipEnable'),
-    $('adSkipMinDelay'),
-    $('adSkipMaxWait'),
+    $('randomModeBtn'),
+    $('shuffleEnable'),
+    $('loopModeBtn'),
+    $('songList'),
+    $('shuffleOnStart'),
+    $('startBtn'),
+    $('npPlayBtn'),
+    $('npPrevBtn'),
+    $('npNextBtn'),
   ];
-  
-  if (extensionEnabled) extensionEnabled.checked = active;
-  if (extensionEnabledLabel) extensionEnabledLabel.textContent = active ? 'Aktif' : 'Nonaktif';
-  
+
+  if (masterEnabled) masterEnabled.checked = active;
+  if (masterLabel) masterLabel.textContent = active ? 'Aktif' : 'Nonaktif';
+  if (masterHint) masterHint.textContent = active ? 'Nonaktifkan untuk menghentikan semua otomatisasi' : 'Aktifkan untuk memulai otomatisasi';
+
   automationControls.forEach((control) => {
     if (control) control.disabled = !active;
   });
-  
-  if (announce) {
-    setStatus(active ? 'Ekstensi aktif' : 'Ekstensi nonaktif — playback YT Music tidak diganggu');
-  }
 }
 
 /**
- * Show/hide playlist vs history tab
+ * Format seconds as M:SS
  */
-export function showTab(showHistory) {
-  const playlistSection = $('playlistSection');
-  const historySection = $('historySection');
-  const tabPlaylistBtn = $('tabPlaylistBtn');
-  const tabHistoryBtn = $('tabHistoryBtn');
-  
-  if (playlistSection) playlistSection.style.display = showHistory ? 'none' : 'block';
-  if (historySection) historySection.style.display = showHistory ? 'block' : 'none';
-  if (tabPlaylistBtn) tabPlaylistBtn.classList.toggle('active', !showHistory);
-  if (tabHistoryBtn) tabHistoryBtn.classList.toggle('active', showHistory);
+export function formatSeconds(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 /**
@@ -87,4 +78,13 @@ export function formatTimestamp(timestamp) {
  */
 export function escapeCsvField(field) {
   return `"${String(field).replace(/"/g, '""')}"`;
+}
+
+/**
+ * Escape HTML
+ */
+export function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }

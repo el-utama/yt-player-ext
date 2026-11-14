@@ -15,31 +15,31 @@ import { reportStatus, reportDecisionOnce } from '../shared/messaging.js';
 export async function maybeScrobble() {
   if (!state.enabled) return false;
   if (state.scrobbled || state.eligibleSeconds < MIN_SCROBBLE_SECONDS) return false;
-  
+
   const video = state.video;
   if (!video) {
     reportDecisionOnce(state, 'video_not_found', 'scrobble_rejected', 'video_not_found');
     return false;
   }
-  
+
   if (isAdShowing(video)) {
     reportDecisionOnce(state, 'ad_active', 'scrobble_paused', 'ad_active');
     return false;
   }
-  
+
   const title = getTrackTitle();
   const expected = (await storageGet(['currentExpectedQuery'])).currentExpectedQuery || '';
-  
+
   if (!isWhitelisted(title, expected)) {
     reportDecisionOnce(
       state,
       `whitelist_mismatch:${title}:${expected}`,
       'scrobble_rejected',
-      `whitelist_mismatch:${title || 'title_not_found'}`
+      `whitelist_mismatch:${title || 'title_not_found'}`,
     );
     return false;
   }
-  
+
   const response = await sendMessage({
     action: 'SCROBBLE',
     trackInfo: {
@@ -49,12 +49,12 @@ export async function maybeScrobble() {
       sessionId: state.sessionId,
     },
   });
-  
+
   if (response?.ok !== true) {
     reportStatus('scrobble_rejected', response?.error || 'background_rejected');
     return false;
   }
-  
+
   state.scrobbled = true;
   reportStatus('scrobbled', title);
   return true;
@@ -66,7 +66,7 @@ export async function maybeScrobble() {
 export async function advanceAfterDecision() {
   if (!state.enabled) return;
   if (state.advancing) return;
-  
+
   state.advancing = true;
   try {
     // A scrobble failure must never block queue advancement.

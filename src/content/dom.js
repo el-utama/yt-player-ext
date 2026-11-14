@@ -69,22 +69,22 @@ export function findPlayControl() {
     ...document.querySelectorAll(SELECTORS.playPause),
     ...document.querySelectorAll('ytmusic-player-bar button, ytmusic-player-bar [role="button"]'),
   ];
-  
+
   const seen = new Set();
   return candidates.find((candidate) => {
     if (seen.has(candidate)) return false;
     seen.add(candidate);
-    
+
     const label = [
       candidate.getAttribute('aria-label'),
       candidate.getAttribute('title'),
       candidate.getAttribute('data-tooltip-text'),
       candidate.textContent,
     ].filter(Boolean).join(' ').trim();
-    
+
     const playPauseWord = /play|pause|putar|jeda|lecture|reproduc|wiedergabe|riprodu|播放|再生|재생|воспроизвед|пауза/i.test(label);
     const unrelatedControl = /\b(?:next|previous|volume|mute|queue|shuffle|repeat|seek|forward|back|speed|lyrics|suivant(?:e)?|siguiente|seguinte|n[aä]chste|successiv[ao]|следующ|volgende)\b|次へ|前へ|다음|이전/i.test(label);
-    
+
     return candidate.offsetParent !== null
       && !candidate.disabled
       && playPauseWord
@@ -101,16 +101,77 @@ export function getTrackTitle() {
 }
 
 /**
+ * Get the artist/byline text from the player bar.
+ */
+export function getTrackArtist() {
+  const artistEl = document.querySelector(SELECTORS.playerArtist);
+  return (artistEl?.textContent || '')
+    .replace(/\s+/g, ' ')
+    .replace(/^•\s*/, '')
+    .trim();
+}
+
+const NEXT_LABEL = /\b(?:next|berikutnya|siguiente|suivant|n[aä]chste|successiv[ao]|volgende|следующ)\b|次へ|다음/i;
+const PREV_LABEL = /\b(?:previous|prev|sebelumnya|anterior|précédent|vorherige|volgende|предыдущ)\b|前へ|이전/i;
+const UNRELATED_LABEL = /\b(?:volume|mute|queue|shuffle|repeat|seek|forward|back|speed|lyrics|play|pause)\b|再生|재생/i;
+
+function findTransportControl(kind) {
+  const selectors = kind === 'prev' ? SELECTORS.previousTrack : SELECTORS.nextTrack;
+  const labelPattern = kind === 'prev' ? PREV_LABEL : NEXT_LABEL;
+  const seen = new Set();
+
+  const candidates = [
+    ...selectors.flatMap((selector) => [...document.querySelectorAll(selector)]),
+    ...document.querySelectorAll('ytmusic-player-bar button, ytmusic-player-bar [role="button"]'),
+  ];
+
+  return candidates.find((candidate) => {
+    if (!candidate || seen.has(candidate)) return false;
+    seen.add(candidate);
+    if (candidate.disabled || candidate.getAttribute?.('aria-disabled') === 'true') return false;
+
+    const label = [
+      candidate.getAttribute?.('aria-label'),
+      candidate.getAttribute?.('title'),
+      candidate.getAttribute?.('data-tooltip-text'),
+      candidate.textContent,
+    ].filter(Boolean).join(' ').trim();
+
+    return labelPattern.test(label)
+      && !UNRELATED_LABEL.test(label)
+      && (candidate.offsetParent !== null || isElementVisible(candidate));
+  });
+}
+
+/**
+ * Click YouTube Music's own Next control. Returns false when it is missing.
+ */
+export function clickNativeNext() {
+  const control = findTransportControl('next');
+  if (!control) return false;
+  return clickElement(control);
+}
+
+/**
+ * Click YouTube Music's own Previous control. Returns false when it is missing.
+ */
+export function clickNativePrev() {
+  const control = findTransportControl('prev');
+  if (!control) return false;
+  return clickElement(control);
+}
+
+/**
  * Disable autoplay on player page
  */
 export function disableAutoplay() {
   if (!state.enabled || !window.location.pathname.includes('/watch')) return;
-  
+
   const candidates = [
     ...document.querySelectorAll(SELECTORS.autoplay),
     ...document.querySelectorAll('button, [role="switch"], [role="button"]'),
   ];
-  
+
   const control = candidates.find((candidate) => {
     const label = [
       candidate.getAttribute('aria-label'),
@@ -118,17 +179,17 @@ export function disableAutoplay() {
       candidate.getAttribute('data-tooltip-text'),
       candidate.textContent,
     ].filter(Boolean).join(' ');
-    
+
     return AUTOPLAY_LABELS.test(label)
       && candidate.closest('ytmusic-player-bar, ytmusic-player-page, main')
       && candidate.offsetParent !== null
       && !candidate.disabled;
   });
-  
+
   if (!control) {
     return; // Silently ignore - not critical
   }
-  
+
   const active = control.getAttribute('aria-pressed') === 'true'
     || control.hasAttribute('active')
     || control.getAttribute('aria-checked') === 'true'
@@ -138,7 +199,7 @@ export function disableAutoplay() {
       control.getAttribute('title'),
       control.getAttribute('data-state'),
     ].filter(Boolean).join(' '));
-  
+
   if (active && typeof control.click === 'function') {
     control.click();
   }

@@ -21,12 +21,12 @@ Dokumen ini menjelaskan cara memasang ekstensi secara lokal menggunakan **Load u
 
 5. Pastikan kartu ekstensi **YT Music Custom Player & Whitelist Scrobbler** muncul tanpa pesan error.
 6. Klik **Details** dan verifikasi:
-   - Extension version: `3.3.0`.
+   - Extension version: `3.4.0`.
    - Site access hanya untuk `music.youtube.com`.
    - Popup tersedia ketika ikon ekstensi diklik.
 7. Jika sebelumnya versi lama terpasang, gunakan **Reload** setelah setiap perubahan file. Bila service worker tampak macet, klik **Remove**, lalu Load unpacked kembali.
 
-> File `background.js`, `content.js`, dan `popup.js` adalah hasil build dan sudah tersedia di repository. Jika mengubah file di `src/`, jalankan `npm install` lalu build sebelum menekan **Reload**. Di Windows/PowerShell gunakan `$env:NODE_ENV='production'; node esbuild.config.mjs` (script `npm run build` memakai sintaks environment POSIX).
+> File `background.js`, `content.js`, `popup.js`, dan `options.js` adalah hasil build dan sudah tersedia di repository. Jika mengubah file di `src/`, jalankan `npm install` lalu build sebelum menekan **Reload**. Di Windows/PowerShell gunakan `$env:NODE_ENV='production'; node esbuild.config.mjs` (script `npm run build` memakai sintaks environment POSIX).
 
 ### Memeriksa error instalasi
 
@@ -299,6 +299,78 @@ Popup juga menampilkan status diagnostik seperti `player_ready`, `play_requested
 4. Buka file CSV menggunakan editor teks atau spreadsheet.
 
 **Expected:** setiap field ter-quote, quote internal menjadi `""`, timestamp menggunakan format lokal, dan URL/title tidak merusak kolom.
+
+### E2E-16 — Options page & settings persistence
+
+1. Buka Options page (klik gear di popup atau `chrome://extensions` → Details → Extension options).
+2. Ubah: Ad-Skip min delay, Random mode ke "semua pemutaran", Loop ke "satu", Sleep timer ke "menit: 5".
+3. Tutup Options page, buka popup → verifikasi quick toggles mencerminkan nilai baru.
+4. Reload ekstensi, buka popup → nilai tetap sama.
+5. Di Options page, klik **Export Pengaturan**, simpan JSON.
+6. Reset pengaturan ke default → nilai kembali ke default.
+7. Import file JSON yang diekspor → nilai kembali ke yang diekspor.
+
+**Expected:** settings v2 tersimpan di `chrome.storage.local` (key `settings`), legacy flat keys di-mirror, migrasi otomatis, export/import round-trip valid.
+
+### E2E-17 — Now Playing card
+
+1. Mulai playlist dengan minimal 2 lagu.
+2. Buka popup → verifikasi Now Playing card menampilkan judul, artis, progress bar, badges (Antrean/Native, Loop, Shuffle), kontrol transport.
+3. Pause video → tombol Play/Pause berubah ikon.
+4. Klik Next di Now Playing → lagu berpindah, card update < 3 detik.
+5. Tutup popup, buka kembali → card tetap sinkron.
+
+**Expected:** throttled update (≤2s / on-change), session storage fallback, heartbeat 5s, tanpa polling 2s.
+
+### E2E-18 — Random native (mode semua pemutaran)
+
+1. Di Options page: Random mode = "semua pemutaran", Min `5`, Max `10`.
+2. Buka YouTube Music, cari dan putar lagu apa saja (bukan dari antrean ekstensi).
+3. Amati: lagu berpindah otomatis setelah ~5–10 detik eligible playback.
+4. Verifikasi status popup: `random_advance mode=native`.
+5. Matikan Random mode → auto-advance berhenti.
+
+**Expected:** klik tombol Next native YT Music, fallback seek `duration - 0.25`; tidak bentrok radio autoplay.
+
+### E2E-19 — Loop & Shuffle (antrean ekstensi)
+
+1. Mulai playlist 3 lagu.
+2. Aktifkan Shuffle + Loop "semua".
+3. Amati 10+ transisi: tidak ada lagu diulang sebelum semua 3 diputar (bag shuffle).
+4. Klik Previous → kembali ke histori navigasi (bukan hanya indeks berurutan).
+5. Loop "satu" → lagu yang sama diputar ulang, `sessionId` baru, scrobble dicatat ulang.
+
+**Expected:** bag shuffle, avoid-repeat opsional, navHistory untuk Previous, loop-one replay dengan sessionId baru.
+
+### E2E-20 — Keyboard shortcuts
+
+1. Buka YouTube Music, putar lagu.
+2. `Ctrl+Shift+Space` → Play/Pause toggle.
+3. `Ctrl+Shift+Right` → Next (scrobble jika eligible, lalu next queue/native).
+4. `Ctrl+Shift+Left` → Previous.
+5. `Ctrl+Shift+A` → Toggle Ad-Skip (cek di Options page).
+
+**Expected:** shortcuts terdaftar di `chrome://extensions/shortcuts`, handler di background, tidak perlu fokus popup.
+
+### E2E-21 — Sleep timer
+
+1. Options page: Sleep mode = "menit", Menit = 1.
+2. Mulai playlist → tunggu ~1 menit eligible playback.
+3. Verifikasi: video pause, status popup `sleep_timer_done`.
+4. Reset: mode = "tracks", Tracks = 2.
+5. Putar 2 lagu → pause + status `sleep_timer_done`.
+
+**Expected:** timer berbasis eligible seconds (pause/ad tidak dihitung), pause otomatis.
+
+### E2E-22 — Diagnostics & export/import
+
+1. Options page → Diagnostics → klik **Salin Log** → paste ke editor → verifikasi JSON 20 event terakhir.
+2. Data → **Export Pengaturan** → verifikasi JSON `{schema, exportedAt, settings}`.
+3. Data → **Export Histori** → verifikasi CSV dengan quote escaping.
+4. Data → **Reset Pengaturan ke Default** → konfirmasi → nilai default.
+5. Data → **Hapus Histori Scrobble** → histori kosong.
+
+**Expected:** ring buffer 20, copy to clipboard, export/import round-trip, reset confirmation.
 
 ## 6. Debugging cepat
 

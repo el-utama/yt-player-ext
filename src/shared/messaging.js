@@ -72,6 +72,6 @@ export function isPlayerSender(sender, playerTabId) {
     sender?.tab?.id &&
     sender.tab.id === playerTabId &&
     typeof sender.tab.url === 'string' &&
-    sender.tab.url.startsWith('https://music.youtube.com')
+    sender.tab.url.startsWith('https://music.youtube.com'),
   );
 }

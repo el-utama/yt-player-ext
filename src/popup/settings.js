@@ -1,148 +1,183 @@
-// Popup Settings - Shuffle, Random Duration, Ad-Skip, Popup Size
+// Popup Settings - Quick toggles, size selector, options button, tabs
 
 import { getStorage, setStorage, STORAGE_KEYS } from './storage.js';
-import { $ } from './ui.js';
+import { sendMessage } from '../shared/messaging.js';
+import { $, applyPopupSize, applyExtensionEnabled, setStatus, escapeHtml } from './ui.js';
+
+const RANDOM_MODES = ['off', 'queue', 'all'];
+const LOOP_MODES = ['off', 'all', 'one'];
+
+let currentRandomMode = 'off';
+let currentLoopMode = 'off';
 
 /**
- * Setup shuffle toggle
+ * Quick toggles: ad-skip, random mode, shuffle, loop
  */
-export function setupShuffle() {
-  const shuffleEnable = $('shuffleEnable');
-  if (!shuffleEnable) return;
-  
-  shuffleEnable.addEventListener('change', async () => {
-    await setStorage({ [STORAGE_KEYS.SHUFFLE_ENABLED]: shuffleEnable.checked });
-  });
-  
-  getStorage([STORAGE_KEYS.SHUFFLE_ENABLED]).then(({ shuffleEnabled }) => {
-    shuffleEnable.checked = Boolean(shuffleEnabled);
-  });
-}
-
-/**
- * Setup random duration controls
- */
-export function setupRandomDuration() {
-  const randomEnable = $('randomEnable');
-  const randomMin = $('randomMin');
-  const randomMax = $('randomMax');
-  
-  if (!randomEnable || !randomMin || !randomMax) return;
-  
-  const updateInputs = () => {
-    randomMin.disabled = !randomEnable.checked;
-    randomMax.disabled = !randomEnable.checked;
-  };
-  
-  randomEnable.addEventListener('change', async () => {
-    await setStorage({ [STORAGE_KEYS.RANDOM_ENABLED]: randomEnable.checked });
-    updateInputs();
-  });
-  
-  randomMin.addEventListener('change', async () => {
-    const val = parseInt(randomMin.value, 10);
-    if (Number.isFinite(val) && val >= 0) {
-      await setStorage({ [STORAGE_KEYS.RANDOM_MIN_SECONDS]: val });
-    }
-  });
-  
-  randomMax.addEventListener('change', async () => {
-    const val = parseInt(randomMax.value, 10);
-    if (Number.isFinite(val) && val >= 0) {
-      await setStorage({ [STORAGE_KEYS.RANDOM_MAX_SECONDS]: val });
-    }
-  });
-  
-  // Load initial values
-  getStorage([
-    STORAGE_KEYS.RANDOM_ENABLED, 
-    STORAGE_KEYS.RANDOM_MIN_SECONDS, 
-    STORAGE_KEYS.RANDOM_MAX_SECONDS
-  ]).then(({ randomEnabled, randomMinSeconds, randomMaxSeconds }) => {
-    randomEnable.checked = Boolean(randomEnabled);
-    randomMin.value = Number.isFinite(randomMinSeconds) ? randomMinSeconds : '';
-    randomMax.value = Number.isFinite(randomMaxSeconds) ? randomMaxSeconds : '';
-    updateInputs();
-  });
-}
-
-/**
- * Setup ad-skip controls
- */
-export function setupAdSkip() {
+export function setupQuickToggles() {
+  // Ad-skip toggle
   const adSkipEnable = $('adSkipEnable');
-  const adSkipMinDelay = $('adSkipMinDelay');
-  const adSkipMaxWait = $('adSkipMaxWait');
-  
-  if (!adSkipEnable || !adSkipMinDelay || !adSkipMaxWait) return;
-  
-  const updateInputs = () => {
-    adSkipMinDelay.disabled = !adSkipEnable.checked;
-    adSkipMaxWait.disabled = !adSkipEnable.checked;
-  };
-  
-  adSkipEnable.addEventListener('change', async () => {
-    await setStorage({ [STORAGE_KEYS.AD_SKIP_ENABLED]: adSkipEnable.checked });
-    updateInputs();
-  });
-  
-  adSkipMinDelay.addEventListener('change', async () => {
-    const val = parseInt(adSkipMinDelay.value, 10);
-    if (Number.isFinite(val) && val >= 0) {
-      await setStorage({ [STORAGE_KEYS.AD_SKIP_MIN_DELAY]: val });
-    }
-  });
-  
-  adSkipMaxWait.addEventListener('change', async () => {
-    const val = parseInt(adSkipMaxWait.value, 10);
-    if (Number.isFinite(val) && val >= 0) {
-      await setStorage({ [STORAGE_KEYS.AD_SKIP_MAX_WAIT]: val });
-    }
-  });
-  
-  // Load initial values
-  getStorage([
-    STORAGE_KEYS.AD_SKIP_ENABLED,
-    STORAGE_KEYS.AD_SKIP_MIN_DELAY,
-    STORAGE_KEYS.AD_SKIP_MAX_WAIT,
-  ]).then(({ adSkipEnabled, adSkipMinDelay: minDelay, adSkipMaxWait: maxWait }) => {
-    adSkipEnable.checked = adSkipEnabled !== false;
-    adSkipMinDelay.value = Number.isFinite(minDelay) ? minDelay : 5000;
-    adSkipMaxWait.value = Number.isFinite(maxWait) ? maxWait : 30000;
-    updateInputs();
-  });
+  if (adSkipEnable) {
+    adSkipEnable.addEventListener('change', async () => {
+      const settings = { adSkip: { enabled: adSkipEnable.checked } };
+      const response = await sendMessage({ action: 'SET_SETTINGS', patch: settings });
+      if (!response.ok) {
+        adSkipEnable.checked = !adSkipEnable.checked;
+        setStatus(`Gagal: ${response.error}`, true);
+      }
+    });
+
+    // Load initial
+    getStorage([STORAGE_KEYS.AD_SKIP_ENABLED]).then(({ adSkipEnabled }) => {
+      adSkipEnable.checked = adSkipEnabled !== false;
+    });
+  }
+
+  // Random mode cycle button
+  const randomModeBtn = $('randomModeBtn');
+  const randomModeLabel = $('randomModeLabel');
+  if (randomModeBtn && randomModeLabel) {
+    const updateRandomModeUI = (mode) => {
+      currentRandomMode = mode;
+      randomModeBtn.value = mode;
+      const labels = { off: 'Random: off', queue: 'Random: antrean', all: 'Random: semua' };
+      randomModeLabel.textContent = labels[mode] || labels.off;
+    };
+
+    randomModeBtn.addEventListener('click', async () => {
+      const nextIndex = (RANDOM_MODES.indexOf(currentRandomMode) + 1) % RANDOM_MODES.length;
+      const nextMode = RANDOM_MODES[nextIndex];
+      const settings = { randomWatch: { mode: nextMode } };
+      const response = await sendMessage({ action: 'SET_SETTINGS', patch: settings });
+      if (response.ok) {
+        updateRandomModeUI(nextMode);
+      } else {
+        setStatus(`Gagal: ${response.error}`, true);
+      }
+    });
+
+    // Load initial
+    getStorage([STORAGE_KEYS.RANDOM_ENABLED, STORAGE_KEYS.RANDOM_MIN_SECONDS, STORAGE_KEYS.RANDOM_MAX_SECONDS])
+      .then(({ randomEnabled, randomMinSeconds, randomMaxSeconds }) => {
+        // For backward compatibility, if legacy randomEnabled was true, assume 'queue'
+        if (randomEnabled === true) {
+          updateRandomModeUI('queue');
+        } else {
+          updateRandomModeUI('off');
+        }
+      });
+  }
+
+  // Shuffle toggle
+  const shuffleEnable = $('shuffleEnable');
+  if (shuffleEnable) {
+    shuffleEnable.addEventListener('change', async () => {
+      const settings = { queue: { shuffle: shuffleEnable.checked } };
+      const response = await sendMessage({ action: 'SET_SETTINGS', patch: settings });
+      if (!response.ok) {
+        shuffleEnable.checked = !shuffleEnable.checked;
+        setStatus(`Gagal: ${response.error}`, true);
+      }
+    });
+
+    getStorage([STORAGE_KEYS.SHUFFLE_ENABLED]).then(({ shuffleEnabled }) => {
+      shuffleEnable.checked = Boolean(shuffleEnabled);
+    });
+  }
+
+  // Loop mode cycle button
+  const loopModeBtn = $('loopModeBtn');
+  const loopModeLabel = $('loopModeLabel');
+  if (loopModeBtn && loopModeLabel) {
+    const updateLoopModeUI = (mode) => {
+      currentLoopMode = mode;
+      loopModeBtn.value = mode;
+      const labels = { off: 'Loop: off', all: 'Loop: semua', one: 'Loop: satu' };
+      loopModeLabel.textContent = labels[mode] || labels.off;
+    };
+
+    loopModeBtn.addEventListener('click', async () => {
+      const nextIndex = (LOOP_MODES.indexOf(currentLoopMode) + 1) % LOOP_MODES.length;
+      const nextMode = LOOP_MODES[nextIndex];
+      const settings = { queue: { loop: nextMode } };
+      const response = await sendMessage({ action: 'SET_SETTINGS', patch: settings });
+      if (response.ok) {
+        updateLoopModeUI(nextMode);
+      } else {
+        setStatus(`Gagal: ${response.error}`, true);
+      }
+    });
+
+    // Load initial — would need to read from new settings object
+    updateLoopModeUI('off');
+  }
 }
 
 /**
- * Setup popup size selector
+ * Size selector (S/M/L buttons)
  */
-export function setupPopupSize() {
+export function setupSizeSelector() {
   const sizeButtons = document.querySelectorAll('.size-btn');
-  const sizeRadios = document.querySelectorAll('input[name="popupSize"]');
-  
-  const applySize = (size) => {
-    document.body.dataset.popupSize = size;
+  const applySize = async (size) => {
+    await setStorage({ [STORAGE_KEYS.POPUP_SIZE]: size });
+    applyPopupSize(size);
     sizeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.size === size));
-    sizeRadios.forEach((radio) => { radio.checked = radio.value === size; });
   };
-  
+
   sizeButtons.forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const size = btn.dataset.size;
-      await setStorage({ [STORAGE_KEYS.POPUP_SIZE]: size });
-      applySize(size);
-    });
+    btn.addEventListener('click', () => applySize(btn.dataset.size));
   });
-  
-  sizeRadios.forEach((radio) => {
-    radio.addEventListener('change', async () => {
-      await setStorage({ [STORAGE_KEYS.POPUP_SIZE]: radio.value });
-      applySize(radio.value);
-    });
-  });
-  
+
   // Load initial size
   getStorage([STORAGE_KEYS.POPUP_SIZE]).then(({ popupSize }) => {
     applySize(popupSize || 'medium');
   });
+}
+
+/**
+ * Options page button
+ */
+export function setupOptionsButton() {
+  const optionsBtn = $('optionsBtn');
+  if (!optionsBtn) return;
+
+  optionsBtn.addEventListener('click', () => {
+    if (chrome.runtime.openOptionsPage) {
+      chrome.runtime.openOptionsPage();
+    } else {
+      window.open(chrome.runtime.getURL('options.html'), '_blank');
+    }
+  });
+}
+
+/**
+ * Tab navigation
+ */
+export function setupTabs() {
+  const tabPlayerBtn = $('tabPlayerBtn');
+  const tabQueueBtn = $('tabQueueBtn');
+  const tabHistoryBtn = $('tabHistoryBtn');
+  const playerSection = $('playerSection');
+  const queueSection = $('queueSection');
+  const historySection = $('historySection');
+
+  function showTab(tab) {
+    const sections = { player: playerSection, queue: queueSection, history: historySection };
+    const buttons = { player: tabPlayerBtn, queue: tabQueueBtn, history: tabHistoryBtn };
+
+    Object.keys(sections).forEach((key) => {
+      const isActive = key === tab;
+      if (sections[key]) sections[key].hidden = !isActive;
+      if (buttons[key]) {
+        buttons[key].classList.toggle('active', isActive);
+        buttons[key].setAttribute('aria-selected', isActive);
+      }
+    });
+  }
+
+  tabPlayerBtn?.addEventListener('click', () => showTab('player'));
+  tabQueueBtn?.addEventListener('click', () => showTab('queue'));
+  tabHistoryBtn?.addEventListener('click', () => showTab('history'));
+
+  // Initial
+  showTab('player');
 }
