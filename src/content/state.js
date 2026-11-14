@@ -31,6 +31,14 @@ export const state = {
   adSkipMaxWait: 30000,
   adStartTime: 0,
   adSkipAttempted: false,
+  adSkipLastAttemptAt: 0,
+  adSkipAttemptCount: 0,
+  adForceApplied: false,
+  adForceAppliedAt: 0,
+  adRateBoosted: false,
+  adSavedPlaybackRate: 1,
+  adBadge: '',
+  adSkipMaxWaitReported: false,
 };
 
 /**
@@ -47,8 +55,11 @@ export function resetTrackState(identity, sessionId, randomConfig = {}) {
   state.playAttemptedIdentity = '';
   state.playAttemptedAt = 0;
   state.lastDecisionKey = '';
-  state.adStartTime = 0;
-  state.adSkipAttempted = false;
+
+  // Ad-skip timing is intentionally NOT reset here. The track title changes
+  // while an ad is playing, and resetting the timer on every title change made
+  // the minDelay restart and delayed/skipped the click. Ad-skip state is
+  // driven only by ad start/end transitions in ad-skip.js.
 
   // Random duration config
   state.randomEnabled = Boolean(randomConfig.randomEnabled);

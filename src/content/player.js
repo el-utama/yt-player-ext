@@ -7,7 +7,7 @@ import { storageGet } from './storage.js';
 import { resetTrackState, MIN_SCROBBLE_SECONDS } from './state.js';
 import { getTrackIdentity, isWhitelisted } from '../shared/utils.js';
 import { advanceAfterDecision, maybeScrobble } from './scrobble.js';
-import { checkAndSkipAd } from './ad-skip.js';
+import { checkAndSkipAd, wasAdForcedRecently } from './ad-skip.js';
 
 /**
  * Detect YouTube Music native autoplay takeover.
@@ -59,7 +59,9 @@ export function bindVideo(video) {
   video.addEventListener('play', () => reportStatus('playing'), { passive: true });
   video.addEventListener('pause', () => reportStatus('paused'), { passive: true });
   video.addEventListener('ended', () => {
-    if (!isAdShowing(video)) void advanceAfterDecision();
+    // A forced ad skip ends the ad media itself; that `ended` event must not
+    // advance the queue, the real track is about to start in the same element.
+    if (!isAdShowing(video) && !wasAdForcedRecently()) void advanceAfterDecision();
   }, { passive: true });
   
   tryStartPlayback(video);
@@ -154,5 +156,5 @@ export function tick() {
   }
   
   // Ad-skip check
-  if (state.adSkipEnabled) checkAndSkipAd(video);
+  if (state.adSkipEnabled) checkAndSkipAd(video, ad);
 }

@@ -21,12 +21,12 @@ Dokumen ini menjelaskan cara memasang ekstensi secara lokal menggunakan **Load u
 
 5. Pastikan kartu ekstensi **YT Music Custom Player & Whitelist Scrobbler** muncul tanpa pesan error.
 6. Klik **Details** dan verifikasi:
-   - Extension version: `3.2.8`.
+   - Extension version: `3.3.0`.
    - Site access hanya untuk `music.youtube.com`.
    - Popup tersedia ketika ikon ekstensi diklik.
 7. Jika sebelumnya versi lama terpasang, gunakan **Reload** setelah setiap perubahan file. Bila service worker tampak macet, klik **Remove**, lalu Load unpacked kembali.
 
-> File `background.js`, `content.js`, dan `popup.js` adalah hasil build dan sudah tersedia di repository. Jika mengubah file di `src/`, jalankan `npm install` lalu `npm run build` sebelum menekan **Reload**.
+> File `background.js`, `content.js`, dan `popup.js` adalah hasil build dan sudah tersedia di repository. Jika mengubah file di `src/`, jalankan `npm install` lalu build sebelum menekan **Reload**. Di Windows/PowerShell gunakan `$env:NODE_ENV='production'; node esbuild.config.mjs` (script `npm run build` memakai sintaks environment POSIX).
 
 ### Memeriksa error instalasi
 
@@ -118,10 +118,10 @@ Jangan langsung mengganti selector hanya berdasarkan satu sesi. Ambil sampel saa
 Dari root repository, jalankan test bawaan Node.js berikut tanpa dependency tambahan:
 
 ```powershell
-node --test tests/extension-toggle.test.js
+node --test tests/*.test.js
 ```
 
-**Expected:** seluruh test lulus untuk versi Manifest, switch popup, persistence, guard otomasi, dan badge `OFF`.
+**Expected:** seluruh test lulus untuk versi Manifest, switch popup, persistence, guard otomasi, badge `OFF`, dan perilaku skip iklan (`tests/ad-skip.test.js`, termasuk iklan panjang, guard media non-iklan, serta fallback `seek`/`rate`).
 
 Gunakan queue kecil untuk mengurangi waktu pengujian. Contoh input:
 
@@ -241,8 +241,10 @@ Popup juga menampilkan status diagnostik seperti `player_ready`, `play_requested
 1. Jalankan track ketika sesi menampilkan iklan, jika tersedia.
 2. Amati `document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text')`.
 3. Jangan menganggap waktu iklan sebagai waktu konten.
+4. Jika iklan menyediakan tombol skip, biarkan extension menekannya. Ulangi pada iklan bertipe *pod* (`1 of 2`, `2 of 2`).
+5. Amati status lanjutan. Jika YouTube menolak klik otomatis, extension harus melapor `ad_skip_forced` dengan detail `method=seek` atau `method=rate`, dan iklan berhenti.
 
-**Expected:** timer eligible berhenti/diabaikan selama ad-state aktif; event ended dari iklan tidak memajukan queue secara keliru.
+**Expected:** timer eligible berhenti/diabaikan selama ad-state aktif; event ended dari iklan tidak memajukan queue secara keliru. Status popup menunjukkan `ad_detected` lalu `ad_skip_attempted`; bagian iklan kedua di pod yang sama juga dicoba. Klik yang tidak berefek (proteksi `isTrusted`) diikuti `ad_skip_forced`/`method=seek` sehingga iklan tetap berakhir. Iklan tanpa tombol skip dipaksa setelah max wait; kecepatan playback kembali normal setelah iklan selesai.
 
 ### E2E-10 — Multibahasa autoplay/ad detection
 

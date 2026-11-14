@@ -2,7 +2,7 @@
 
 Manifest V3 Chrome Extension untuk menjalankan antrean lagu berbasis teks di YouTube Music dan mencatat histori pemutaran lokal secara selektif.
 
-> **Current version:** `3.2.8`
+> **Current version:** `3.3.0`
 
 ## Bahasa / Language
 
@@ -36,7 +36,7 @@ Extension ini menyediakan:
 - Popup dengan tiga ukuran: S, M, dan L (layout responsif).
 - **Switch global Aktif/Nonaktif** untuk membiarkan playlist YouTube Music berjalan tanpa intervensi ekstensi (badge "OFF" di ikon toolbar saat nonaktif).
 - **Pencarian dan pemilihan hasil diperbaiki** dengan penanganan *featuring artists*, pemisah artis, dan skor kecocokan yang lebih ketat.
-- **Indikator versi** di popup dengan status perlu reload.
+- **Indikator versi** terlihat di `chrome://extensions`; reload ekstensi setelah setiap update.
 
 Extension ini ditujukan untuk penggunaan pribadi pada `https://music.youtube.com`.
 
@@ -85,7 +85,7 @@ npm install
 npm run build
 ```
 
-Lalu klik **Reload** pada kartu extension. Gunakan `npm run build:dev` untuk build tanpa minifikasi dan `npm run dev` untuk watch mode.
+Lalu klik **Reload** pada kartu extension. Gunakan `npm run build:dev` untuk build tanpa minifikasi dan `npm run dev` untuk watch mode. Di Windows/PowerShell, jika script `npm run build` gagal karena sintaks environment POSIX, jalankan `$env:NODE_ENV='production'; node esbuild.config.mjs`.
 
 ## Cara Penggunaan
 
@@ -155,9 +155,11 @@ Setiap lagu akan diputar selama durasi acak antara Min–Max. Jika durasi tercap
 Centang **Skip iklan otomatis** dan atur:
 
 - **Min delay (ms):** jeda sebelum extension mulai menekan tombol skip, default `5000`.
-- **Max wait (ms):** batas tunggu sebelum upaya skip dipaksa, default `30000`.
+- **Max wait (ms):** batas waktu setelahnya percobaan skip dianggap paksa (force). Default `30000`.
 
-Extension hanya menekan tombol **Skip Ad** yang disediakan YouTube Music. Iklan tanpa tombol skip tidak dapat dilewati. Waktu iklan tidak dihitung sebagai eligible scrobble time, dan pengaturan disimpan di `chrome.storage.local`.
+Extension akan menekan tombol **Skip Ad** begitu tombol itu tersedia setelah min delay, lalu mengulang percobaan setiap ±1,5 detik selama iklan masih berjalan. Ini penting untuk iklan berbentuk *pod* (`1 of 2`, `2 of 2`): bagian iklan berikutnya otomatis dicoba lagi tanpa menunggu konfigurasi ulang.
+
+YouTube kini menolak sebagian klik otomatis (proteksi `isTrusted`), jadi bila klik tidak mengakhiri iklan, extension menyelesaikan **media iklannya** sendiri: melompat ke akhir iklan, lalu mempercepatnya hingga 16x jika perlu. Untuk iklan tanpa tombol skip, langkah paksa ini dijalankan setelah max wait. Kecepatan playback dikembalikan normal begitu iklan selesai. Waktu iklan tidak dihitung sebagai eligible scrobble time, dan pengaturan disimpan di `chrome.storage.local`.
 
 ### 6. Kontrol playback
 
@@ -227,8 +229,11 @@ Status di popup membantu mencari sumber masalah:
 | `scrobbled` | Scrobble berhasil disimpan. |
 | `scrobble_paused` | Scrobble ditahan, biasanya karena iklan aktif. |
 | `scrobble_rejected` | Payload atau whitelist tidak memenuhi syarat. |
+| `ad_detected` | Iklan mulai terdeteksi (termasuk bagian berikutnya dari ad pod). |
+| `ad_ended` | Iklan selesai; berisi durasi dan apakah ada percobaan skip. |
 | `ad_skip_attempted` | Tombol skip iklan berhasil ditekan. |
-| `ad_skip_forced` | Upaya skip dipaksa setelah melewati batas tunggu. |
+| `ad_skip_forced` | Percobaan skip paksa: klik setelah max wait, atau fallback `seek`/`rate` karena klik otomatis ditolak YouTube. |
+| `ad_skip_unavailable` | Max wait tercapai tetapi tombol skip tidak tersedia dan media iklan tidak dapat dipaksa. |
 | `native_autoplay_detected` | YouTube Music memulai radio otomatis; extension mengambil alih dan memajukan antrean. |
 | `Extension context invalidated` | Tab masih memakai content script lama setelah extension di-reload. |
 
@@ -329,13 +334,20 @@ Solusi:
 npm test
 ```
 
-Test regresi memverifikasi versi Manifest, markup dan ID kontrol popup, persistence `extensionEnabled`, guard content/service worker, kontrak badge `OFF`, sinkronisasi player tab setelah service worker restart, pelaporan kegagalan tombol Next, serta deteksi pengambilalihan autoplay native.
+Test regresi memverifikasi versi Manifest, markup dan ID kontrol popup, persistence `extensionEnabled`, guard content/service worker, kontrak badge `OFF`, sinkronisasi player tab setelah service worker restart, pelaporan kegagalan tombol Next, deteksi pengambilalihan autoplay native, serta perilaku skip iklan di `tests/ad-skip.test.js`.
 
 Build production dan development:
 
 ```powershell
 npm run build
 npm run build:dev
+```
+
+Di Windows/PowerShell, `npm run build` gagal karena script memakai sintaks environment POSIX. Gunakan perintah berikut:
+
+```powershell
+$env:NODE_ENV='production'; node esbuild.config.mjs
+$env:NODE_ENV='development'; node esbuild.config.mjs
 ```
 
 Dokumentasi pengujian lebih rinci tersedia di:
@@ -374,7 +386,8 @@ Jangan menyimpan credential atau profile Chrome pribadi ke repository.
 │   ├── content/                  # search, player, ad-skip, scrobble, navigation
 │   └── popup/                    # queue-ui, history-ui, settings, ui
 ├── tests/
-│   └── extension-toggle.test.js  # Regression test
+│   ├── extension-toggle.test.js  # Regression test
+│   └── ad-skip.test.js           # Regression test skip iklan
 ├── scripts/
 │   └── ytmusic-dom-audit.js      # Audit selector Puppeteer
 ├── INSTALL_AND_TESTING.md        # Panduan side-load dan E2E
@@ -405,8 +418,24 @@ Extension ini tidak menggunakan YouTube Data API dan tidak mengirim histori ke s
 - Iklan dapat menunda playback dan tidak dihitung sebagai eligible scrobble time.
 - Popup Chrome memiliki keterbatasan ukuran minimum dan dapat mempertahankan ukuran container sampai popup dibuka ulang.
 - Scrobble hanya lokal; tidak terhubung ke Last.fm, ListenBrainz, atau layanan eksternal lain.
-- Skip iklan hanya bekerja jika YouTube Music menyediakan tombol **Skip Ad**; iklan unskippable tidak dapat dilewati.
+- Skip iklan mengandalkan tombol **Skip Ad**; bila YouTube menolak klik otomatis, extension menyelesaikan media iklan (seek/accelerate) dan mengembalikan kecepatan playback setelahnya.
 - Service worker Manifest V3 dapat dihentikan Chrome ketika idle. Extension menyelaraskan ulang tab player setiap service worker aktif kembali, tetapi pengujian restart tetap disarankan.
+
+## Riwayat Perubahan
+
+### 3.3.0
+
+- **Skip iklan kini benar-benar mengakhiri iklan.** Setelah klik diverifikasi, extension menyelesaikan media iklan sendiri (seek ke akhir, lalu maksimal 16x) ketika YouTube menolak klik otomatis lewat proteksi `isTrusted`.
+- Guard baru memastikan fallback hanya menyentuh media iklan: durasi maksimal 600 detik dan sisa waktunya harus cocok dengan hitung mundur iklan; tanpa hitung mundur hanya media ≤ 90 detik yang dipercaya.
+- Iklan panjang (mis. 4 menit) ikut ter-skip; batas lama 90 detik justru memblokirnya.
+- Event `ended` dari iklan yang dipaksa selesai tidak lagi memicu Next/advance, sehingga lagu tidak terlewat.
+- Ad pod (`1 of 2`, `2 of 2`) di-re-arm otomatis, klik diulang tiap ±1,5 detik, dan status `ad_skip_forced` mencantumkan `method=click|seek|rate`.
+- Perubahan track tidak lagi mereset timer iklan; `ad_ended` hanya dilaporkan saat iklan benar-benar selesai.
+- Regression test skip iklan (`tests/ad-skip.test.js`), dokumentasi, dan teks pengaturan popup diperbarui.
+
+### 3.2.8
+
+- Menambahkan pengaturan skip iklan otomatis (min delay dan max wait) di popup.
 
 ## Lisensi
 
@@ -441,7 +470,7 @@ It provides:
 - S, M, and L popup layouts (responsive).
 - **Global Enable/Disable toggle** to let native YouTube Music playback run without extension interference (badge "OFF" on toolbar icon when disabled).
 - **Improved search & selection** with featuring artist handling, artist separators, and stricter match scoring.
-- **Version indicator** in popup with reload status.
+- **Version indicator** in `chrome://extensions`; reload the extension after each update.
 
 The extension is intended for personal use on `https://music.youtube.com`.
 
@@ -490,7 +519,7 @@ npm install
 npm run build
 ```
 
-Then click **Reload** on the extension card. Use `npm run build:dev` for an unminified build and `npm run dev` for watch mode.
+Then click **Reload** on the extension card. Use `npm run build:dev` for an unminified build and `npm run dev` for watch mode. On Windows/PowerShell, if `npm run build` fails because of POSIX environment syntax, run `$env:NODE_ENV='production'; node esbuild.config.mjs`.
 
 ## Usage
 
@@ -553,9 +582,11 @@ Each track will play for a random duration between Min–Max. When the target is
 Check **Skip iklan otomatis** and configure:
 
 - **Min delay (ms):** how long to wait before the skip button is pressed, default `5000`.
-- **Max wait (ms):** how long to wait before a forced skip attempt, default `30000`.
+- **Max wait (ms):** after this time a skip attempt is treated as forced. Default `30000`.
 
-The extension only clicks the **Skip Ad** button provided by YouTube Music. Unskippable ads cannot be bypassed. Ad time never counts as eligible scrobble time, and the settings are stored in `chrome.storage.local`.
+The extension clicks **Skip Ad** as soon as the button is available after the minimum delay, then retries about every 1.5 seconds while the ad is still playing. This covers ad pods (`1 of 2`, `2 of 2`): the next ad part is picked up automatically.
+
+YouTube now rejects some programmatic clicks (`isTrusted` protection). When a click does not end the ad, the extension finishes the **ad media** itself: it seeks to the end of the ad and accelerates playback up to 16x if needed. For ads without a skip button, this forced step runs after the maximum wait. The playback rate is restored as soon as the ad ends. Ad time never counts as eligible scrobble time, and the settings are stored in `chrome.storage.local`.
 
 ### 7. Playback controls
 
@@ -618,8 +649,11 @@ When Next is pressed after the threshold and whitelist checks pass, the extensio
 | `scrobbled` | The scrobble was saved locally. |
 | `scrobble_paused` | Scrobbling is paused, usually because an ad is active. |
 | `scrobble_rejected` | The whitelist or payload validation failed. |
+| `ad_detected` | An ad was detected (including the next part of an ad pod). |
+| `ad_ended` | The ad finished; includes duration and whether a skip was attempted. |
 | `ad_skip_attempted` | The ad skip button was clicked. |
-| `ad_skip_forced` | A forced skip was attempted after the maximum wait. |
+| `ad_skip_forced` | Forced skip: a click after the maximum wait, or a `seek`/`rate` fallback when YouTube rejected the programmatic click. |
+| `ad_skip_unavailable` | The maximum wait elapsed, no skip button was available, and the ad media could not be forced. |
 | `native_autoplay_detected` | YouTube Music started an automatic radio; the extension reclaimed control and advanced the queue. |
 | `Extension context invalidated` | The tab still contains an old content script after an extension reload. |
 
@@ -685,13 +719,20 @@ Automated regression tests:
 npm test
 ```
 
-The tests verify the Manifest version, popup control markup and element IDs, `extensionEnabled` persistence, content/service worker guards, the `OFF` badge contract, player tab reconciliation after a service worker restart, Next button failure reporting, and native autoplay takeover detection.
+The tests verify the Manifest version, popup control markup and element IDs, `extensionEnabled` persistence, content/service worker guards, the `OFF` badge contract, player tab reconciliation after a service worker restart, Next button failure reporting, native autoplay takeover detection, and ad-skip behavior in `tests/ad-skip.test.js`.
 
 Build commands:
 
 ```powershell
 npm run build
 npm run build:dev
+```
+
+On Windows/PowerShell, `npm run build` fails because the script uses POSIX environment syntax. Use:
+
+```powershell
+$env:NODE_ENV='production'; node esbuild.config.mjs
+$env:NODE_ENV='development'; node esbuild.config.mjs
 ```
 
 The Puppeteer DOM audit script is located at:
@@ -725,7 +766,8 @@ Do not commit personal Chrome credentials or profiles.
 │   ├── content/                  # search, player, ad-skip, scrobble, navigation
 │   └── popup/                    # queue-ui, history-ui, settings, ui
 ├── tests/
-│   └── extension-toggle.test.js  # Regression tests
+│   ├── extension-toggle.test.js  # Regression tests
+│   └── ad-skip.test.js           # Ad-skip regression tests
 ├── scripts/
 │   └── ytmusic-dom-audit.js      # Puppeteer selector audit
 ├── INSTALL_AND_TESTING.md        # Side-load and E2E guide
@@ -756,8 +798,24 @@ The extension does not use the YouTube Data API and does not send scrobble histo
 - Ads may delay playback and never count toward eligible scrobble time.
 - Chrome action popups have minimum-size and lifecycle behavior; close/reopen the popup after changing size modes.
 - Scrobble history is local only and is not synchronized with Last.fm, ListenBrainz, or another external service.
-- Ad skipping only works when YouTube Music exposes a **Skip Ad** button; unskippable ads cannot be bypassed.
+- Ad skipping relies on the **Skip Ad** button; when YouTube rejects the programmatic click, the extension finishes the ad media (seek/accelerate) and restores the playback rate afterwards.
 - Manifest V3 service workers may be suspended while idle. The extension reconciles the player tab whenever the worker wakes up, but service-worker restart should still be included in testing.
+
+## Changelog
+
+### 3.3.0
+
+- **Ad skip now actually ends ads.** After a click is verified, the extension finishes the ad media itself (seek to the end, then up to 16x) when YouTube rejects the programmatic click through the `isTrusted` protection.
+- A new guard keeps the fallback on ad media only: at most 600 seconds long, and its remaining time must match the on-screen ad countdown; without a countdown only media ≤ 90 seconds is trusted.
+- Long ads (for example 4 minutes) are now skipped too; the previous 90-second limit blocked them.
+- The `ended` event of a forced ad no longer advances the queue, so the real track is not skipped.
+- Ad pods (`1 of 2`, `2 of 2`) re-arm automatically, clicks retry about every 1.5 seconds, and `ad_skip_forced` reports `method=click|seek|rate`.
+- Track changes no longer reset the ad timer; `ad_ended` is only reported when the ad really ends.
+- New ad-skip regression tests (`tests/ad-skip.test.js`), plus updated documentation and popup setting text.
+
+### 3.2.8
+
+- Added automatic ad-skip settings (minimum delay and maximum wait) to the popup.
 
 ## License
 

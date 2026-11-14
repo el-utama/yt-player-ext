@@ -10,7 +10,7 @@ const chromeExtensionPlugin = chromeExtension({
   manifest: {
     transform: (manifest) => ({
       ...manifest,
-      version: process.env.npm_package_version || '3.2.8',
+      version: process.env.npm_package_version || '3.3.0',
     }),
   },
 });
