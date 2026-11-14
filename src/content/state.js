@@ -32,6 +32,7 @@ export const state = {
   currentSessionId: '',
   loopMode: 'off',
   shuffleEnabled: false,
+  enforceQueue: true,
 
   // Random watch timer
   randomWatchMode: 'off',
@@ -99,6 +100,15 @@ export function resetTrackState(identity, sessionId) {
   // the minDelay restart and delayed/skipped the click. Ad-skip state is
   // driven only by ad start/end transitions in ad-skip.js.
 
+  state.randomEnabled = state.randomWatchMode !== 'off';
+  state.randomTargetSeconds = pickRandomTargetSeconds();
+}
+
+/**
+ * Recompute random target when settings change mid-track (e.g., user enables
+ * random mode via options page while a track is already playing).
+ */
+export function refreshRandomTarget() {
   state.randomEnabled = state.randomWatchMode !== 'off';
   state.randomTargetSeconds = pickRandomTargetSeconds();
 }

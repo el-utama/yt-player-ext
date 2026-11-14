@@ -1,6 +1,6 @@
 // Options Page - Full settings management
 
-import { loadSettings, saveSettings, exportSettingsPayload, importSettingsPayload, DEFAULT_SETTINGS, SETTINGS_KEY, SETTINGS_SCHEMA, LEGACY_KEYS } from '../shared/settings.js';
+import { loadSettings, saveSettings, exportSettingsPayload, importSettingsPayload, DEFAULT_SETTINGS } from '../shared/settings.js';
 import { sendMessage } from '../shared/messaging.js';
 import { getStorage, setStorage, STORAGE_KEYS } from './storage.js';
 
@@ -238,7 +238,7 @@ function setupBindings() {
   bindCheckbox(elements.queueShuffle, 'queue.shuffle');
   bindSelect(elements.queueLoop, 'queue.loop');
   bindNumber(elements.queueAvoidRepeat, 'queue.avoidRepeat', { min: 0, max: 50 });
-  // enforceQueue is hardcoded for now
+  bindCheckbox(elements.enforceQueue, 'queue.enforceQueue');
 
   // Sleep
   bindRadioGroup(elements.sleepMode, 'sleepTimer.mode');

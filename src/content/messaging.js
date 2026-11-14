@@ -6,6 +6,8 @@ import { advanceAfterDecision } from './scrobble.js';
 import { clickNativeNext, clickNativePrev } from './dom.js';
 import { reportStatus } from '../shared/messaging.js';
 import { reportNowPlaying } from './now-playing.js';
+import { resetTrackState, getTrackIdentity } from './state.js';
+import { getTrackTitle } from './dom.js';
 
 /**
  * Handle messages from background/popup
@@ -67,23 +69,48 @@ export function setupMessageListener() {
         sendResponse({ ok: false, error: 'video-not-found' });
         return false;
       }
-      state.scrobbled = false;
-      state.eligibleSeconds = 0;
-      try {
-        video.currentTime = 0;
-        video.play().catch(() => undefined);
-        reportStatus('replay_track');
-        reportNowPlaying(true);
-        sendResponse({ ok: true });
-      } catch (_error) {
-        sendResponse({ ok: false, error: 'replay-failed' });
-      }
-      return false;
+      // Generate new sessionId for the replay so it's treated as a new scrobble
+      const newSessionId = Date.now().toString(36) + Math.random().toString(36).slice(2);
+      const identity = `${window.location.href.split('&')[0]}|${getTrackTitle()}`;
+      resetTrackState(identity, newSessionId);
+      state.sessionId = newSessionId;
+
+      video.currentTime = 0;
+      video.play()
+        .then(() => {
+          reportStatus('replay_track');
+          reportNowPlaying(true);
+          sendResponse({ ok: true });
+        })
+        .catch((_err) => {
+          sendResponse({ ok: false, error: 'replay-failed' });
+        });
+      return true; // Async response
     }
 
     if (action === 'NATIVE_NEXT' || action === 'NATIVE_PREV') {
-      const clicked = action === 'NATIVE_NEXT' ? clickNativeNext() : clickNativePrev();
-      sendResponse(clicked ? { ok: true } : { ok: false, error: 'native-control-not-found' });
+      const isNext = action === 'NATIVE_NEXT';
+      const clicked = isNext ? clickNativeNext() : clickNativePrev();
+
+      if (clicked) {
+        sendResponse({ ok: true });
+        return false;
+      }
+
+      // Fallback: seek to near end of current video to trigger auto-advance
+      const video = document.querySelector('video');
+      if (video && Number.isFinite(video.duration) && video.duration > 0) {
+        try {
+          video.currentTime = Math.max(0, video.duration - 0.25);
+          reportStatus(`native_${isNext ? 'next' : 'prev'}_fallback`, 'seek_to_end');
+          sendResponse({ ok: true, fallback: 'seek' });
+          return false;
+        } catch (_err) {
+          // Ignore, will return error below
+        }
+      }
+
+      sendResponse({ ok: false, error: 'native-control-not-found' });
       return false;
     }
 

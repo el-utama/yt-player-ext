@@ -271,7 +271,7 @@ export async function sendControlToPlayer(action, getStorageFn = getStorage) {
   try {
     await chrome.tabs.sendMessage(tabId, { action });
     return true;
-  } catch (_error) {
+  } catch (_err) {
     return false;
   }
 }

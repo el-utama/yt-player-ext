@@ -22,6 +22,8 @@ const RANDOM_ADVANCE_COOLDOWN_MS = 2000;
  * extension.
  */
 export function enforceQueueOwnership(title, expectedQuery) {
+  if (!state.enforceQueue) return;
+
   const urlKey = `${window.location.pathname}${window.location.search}`;
   if (state.lastPlayerUrl !== urlKey) {
     state.lastPlayerUrl = urlKey;
@@ -150,7 +152,7 @@ export function maybeRandomAdvance(video = state.video, ad = state.lastAdState) 
       video.currentTime = Math.max(0, video.duration - 0.25);
       reportStatus('random_advance', 'mode=native method=seek');
       return true;
-    } catch (_error) {
+    } catch (_err) {
       // Ignore and report the failure below.
     }
   }

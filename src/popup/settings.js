@@ -2,7 +2,7 @@
 
 import { getStorage, setStorage, STORAGE_KEYS } from './storage.js';
 import { sendMessage } from '../shared/messaging.js';
-import { $, applyPopupSize, applyExtensionEnabled, setStatus, escapeHtml } from './ui.js';
+import { $, applyPopupSize, setStatus } from './ui.js';
 
 const RANDOM_MODES = ['off', 'queue', 'all'];
 const LOOP_MODES = ['off', 'all', 'one'];
@@ -55,16 +55,8 @@ export function setupQuickToggles() {
       }
     });
 
-    // Load initial
-    getStorage([STORAGE_KEYS.RANDOM_ENABLED, STORAGE_KEYS.RANDOM_MIN_SECONDS, STORAGE_KEYS.RANDOM_MAX_SECONDS])
-      .then(({ randomEnabled, randomMinSeconds, randomMaxSeconds }) => {
-        // For backward compatibility, if legacy randomEnabled was true, assume 'queue'
-        if (randomEnabled === true) {
-          updateRandomModeUI('queue');
-        } else {
-          updateRandomModeUI('off');
-        }
-      });
+    // Load initial from settings object
+    loadRandomMode().then(updateRandomModeUI);
   }
 
   // Shuffle toggle
@@ -107,9 +99,59 @@ export function setupQuickToggles() {
       }
     });
 
-    // Load initial — would need to read from new settings object
-    updateLoopModeUI('off');
+    // Load initial from settings object
+    loadLoopMode().then(updateLoopModeUI);
   }
+
+  // Listen for settings changes from options page / other popups
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'local') return;
+    if (changes.settings) {
+      const s = changes.settings.newValue;
+      if (!s || typeof s !== 'object') return;
+      if (typeof s.randomWatch?.mode === 'string') {
+        const btn = $('randomModeBtn');
+        const lbl = $('randomModeLabel');
+        if (btn && lbl) updateRandomModeUI(s.randomWatch.mode);
+      }
+      if (typeof s.queue?.loop === 'string') {
+        const btn = $('loopModeBtn');
+        const lbl = $('loopModeLabel');
+        if (btn && lbl) updateLoopModeUI(s.queue.loop);
+      }
+      if (typeof s.adSkip?.enabled === 'boolean') {
+        const chk = $('adSkipEnable');
+        if (chk) chk.checked = s.adSkip.enabled;
+      }
+      if (typeof s.queue?.shuffle === 'boolean') {
+        const chk = $('shuffleEnable');
+        if (chk) chk.checked = s.queue.shuffle;
+      }
+    }
+  });
+}
+
+/**
+ * Load random mode from settings object, with legacy fallback
+ */
+async function loadRandomMode() {
+  const data = await getStorage(['settings', STORAGE_KEYS.RANDOM_ENABLED]);
+  if (data.settings && typeof data.settings === 'object' && data.settings.randomWatch) {
+    return data.settings.randomWatch.mode;
+  }
+  // Legacy fallback
+  return data[STORAGE_KEYS.RANDOM_ENABLED] === true ? 'queue' : 'off';
+}
+
+/**
+ * Load loop mode from settings object, with legacy fallback
+ */
+async function loadLoopMode() {
+  const data = await getStorage(['settings', STORAGE_KEYS.SHUFFLE_ENABLED]);
+  if (data.settings && typeof data.settings === 'object' && data.settings.queue) {
+    return data.settings.queue.loop;
+  }
+  return 'off';
 }
 
 /**
@@ -128,9 +170,10 @@ export function setupSizeSelector() {
   });
 
   // Load initial size
-  getStorage([STORAGE_KEYS.POPUP_SIZE]).then(({ popupSize }) => {
-    applySize(popupSize || 'medium');
-  });
+  (async () => {
+    const { popupSize } = await getStorage([STORAGE_KEYS.POPUP_SIZE]);
+    await applySize(popupSize || 'medium');
+  })();
 }
 
 /**

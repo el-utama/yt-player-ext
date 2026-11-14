@@ -19,7 +19,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   masterEnabled: true,
   adSkip: Object.freeze({ enabled: true, minDelay: 5000, maxWait: 30000 }),
   randomWatch: Object.freeze({ mode: 'off', minSeconds: 40, maxSeconds: 60 }),
-  queue: Object.freeze({ shuffle: false, loop: 'off', avoidRepeat: 0 }),
+  queue: Object.freeze({ shuffle: false, loop: 'off', avoidRepeat: 0, enforceQueue: true }),
   ui: Object.freeze({ popupSize: 'medium' }),
   sleepTimer: Object.freeze({ mode: 'off', minutes: 30, tracks: 10 }),
   diagnostics: Object.freeze({ verbose: false }),

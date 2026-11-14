@@ -1,6 +1,6 @@
 // Popup Now Playing - Keep the now-playing card in sync with background
 
-import { $, setStatus, formatSeconds, escapeHtml } from './ui.js';
+import { $, formatSeconds } from './ui.js';
 import { sendMessage } from '../shared/messaging.js';
 
 let nowPlayingPollTimer = null;

@@ -15,6 +15,10 @@ export function applySettings(settings) {
   const normalized = normalizeSettings(settings);
   const wasEnabled = state.enabled;
 
+  const prevRandomMode = state.randomWatchMode;
+  const prevMin = state.randomMinSeconds;
+  const prevMax = state.randomMaxSeconds;
+
   state.settings = normalized;
   state.settingsReady = true;
 
@@ -29,8 +33,18 @@ export function applySettings(settings) {
 
   state.loopMode = normalized.queue.loop;
   state.shuffleEnabled = normalized.queue.shuffle;
+  state.enforceQueue = normalized.queue.enforceQueue ?? true;
 
   setEnabled(normalized.masterEnabled !== false);
+
+  // If random settings changed while a track is playing, recompute target
+  const randomChanged = prevRandomMode !== state.randomWatchMode
+    || prevMin !== state.randomMinSeconds
+    || prevMax !== state.randomMaxSeconds;
+  if (randomChanged && state.randomEnabled) {
+    import('./state.js').then(({ refreshRandomTarget }) => refreshRandomTarget());
+  }
+
   return wasEnabled !== state.enabled;
 }
 

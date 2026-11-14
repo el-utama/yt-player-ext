@@ -24,7 +24,7 @@ async function setEphemeral(values) {
       await chrome.storage.session.set(values);
       return;
     }
-  } catch (_error) {
+  } catch (_err) {
     // Fall through to local storage.
   }
   await setStorage(values);
@@ -36,7 +36,7 @@ async function getEphemeral(key) {
       const data = await chrome.storage.session.get(key);
       if (data && data[key] !== undefined) return data[key];
     }
-  } catch (_error) {
+  } catch (_err) {
     // Fall through to local storage.
   }
   const data = await getStorage([key]);

@@ -63,7 +63,7 @@ function forceSeekAd(video) {
     state.adForceApplied = true;
     state.adForceAppliedAt = Date.now();
     return true;
-  } catch (_error) {
+  } catch (_err) {
     return false;
   }
 }
@@ -80,7 +80,7 @@ function forceAccelerateAd(video) {
     state.adForceApplied = true;
     state.adForceAppliedAt = Date.now();
     return true;
-  } catch (_error) {
+  } catch (_err) {
     return false;
   }
 }
@@ -103,7 +103,7 @@ function restorePlaybackRate(video) {
   const target = video || state.video;
   try {
     if (target) target.playbackRate = state.adSavedPlaybackRate || 1;
-  } catch (_error) {
+  } catch (_err) {
     // Video element may already be gone.
   }
   state.adRateBoosted = false;

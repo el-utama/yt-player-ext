@@ -223,7 +223,7 @@ export function isElementVisible(el) {
   if (typeof el.checkVisibility === 'function') {
     try {
       if (!el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) return false;
-    } catch (_error) {
+    } catch (_err) {
       // Older Chrome without the options object: rely on the checks above.
     }
   }
@@ -259,7 +259,7 @@ export function clickElement(el) {
     if (typeof Ctor !== 'function') return;
     try {
       el.dispatchEvent(new Ctor(type, { ...base, ...extra }));
-    } catch (_error) {
+    } catch (_err) {
       // Event constructor unavailable or rejected; continue with the rest.
     }
   };

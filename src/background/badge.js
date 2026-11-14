@@ -13,7 +13,7 @@ export async function updateExtensionBadge(enabled) {
     await chrome.action.setTitle({
       title: active ? 'YT Music Scrobbler — Aktif' : 'YT Music Scrobbler — Nonaktif',
     });
-  } catch (_error) {
+  } catch (_err) {
     // Badge API may not be available, ignore
   }
 }
@@ -29,8 +29,8 @@ export async function refreshExtensionBadge(getStorageFn) {
 /**
  * Initialize badge on startup/install
  */
-export async function initBadge(getStorageFn) {
-  await refreshExtensionBadge(getStorageFn);
+export async function initBadge(_getStorageFn) {
+  await refreshExtensionBadge(_getStorageFn);
 }
 
 /**

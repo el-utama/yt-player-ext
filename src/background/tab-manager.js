@@ -58,11 +58,11 @@ export async function pausePlayer(tabId) {
     });
     // Small delay to ensure pause takes effect before navigation
     await new Promise((resolve) => setTimeout(resolve, 150));
-  } catch (_error) {
+  } catch (_err) {
     // Fallback to message passing
     try {
       await chrome.tabs.sendMessage(tabId, { action: 'PAUSE' });
-    } catch (_e) {
+    } catch (_e2) {
       // Ignore
     }
   }
