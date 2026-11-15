@@ -265,6 +265,107 @@ function setupBindings() {
   elements.viewSource.addEventListener('click', () => {
     chrome.tabs.create({ url: 'https://github.com/el-utama/yt-player-ext', active: true });
   });
+
+  // Save button
+  const saveBtn = $('#optSaveSettings');
+  const saveStatus = $('#optSaveStatus');
+  if (saveBtn && saveStatus) {
+    saveBtn.addEventListener('click', saveAllSettings);
+  }
+}
+
+// Save all settings from form
+async function saveAllSettings() {
+  const saveBtn = $('#optSaveSettings');
+  const saveStatus = $('#optSaveSettings');
+  const statusEl = $('#optSaveStatus');
+  if (!saveBtn || !statusEl) return;
+
+  // Collect all form values into a patch
+  const patch = collectFormValues();
+
+  // UI: saving state
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Menyimpan…';
+  statusEl.innerHTML = '<span class="spinner"></span> Menyimpan…';
+  statusEl.className = 'save-status saving';
+
+  try {
+    const response = await sendMessage({ action: 'SET_SETTINGS', patch });
+    if (!response.ok) throw new Error(response.error);
+
+    // Success
+    statusEl.textContent = '✓ Tersimpan';
+    statusEl.className = 'save-status success';
+    showToast('Pengaturan disimpan', 'success');
+
+    // Reload form to reflect any normalized values
+    await loadForm();
+  } catch (error) {
+    // Error
+    statusEl.textContent = '✗ Gagal: ' + error.message;
+    statusEl.className = 'save-status error';
+    showToast('Gagal menyimpan: ' + error.message, 'error');
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Simpan Perubahan';
+    // Clear status after 3 seconds
+    setTimeout(() => {
+      statusEl.textContent = '';
+      statusEl.className = 'save-status';
+    }, 3000);
+  }
+}
+
+/**
+ * Collect all form values into a settings patch object
+ */
+function collectFormValues() {
+  const patch = {};
+
+  // General
+  patch.masterEnabled = elements.masterEnabled.checked;
+
+  const popupSize = document.querySelector('input[name="popupSize"]:checked');
+  if (popupSize) patch.ui = { popupSize: popupSize.value };
+
+  // Ads
+  patch.adSkip = {
+    enabled: elements.adSkipEnabled.checked,
+    minDelay: Number(elements.adSkipMinDelay.value) || 0,
+    maxWait: Number(elements.adSkipMaxWait.value) || 0,
+  };
+
+  // Random
+  const randomMode = document.querySelector('input[name="randomMode"]:checked');
+  patch.randomWatch = {
+    mode: randomMode ? randomMode.value : 'off',
+    minSeconds: Number(elements.randomMin.value) || 0,
+    maxSeconds: Number(elements.randomMax.value) || 0,
+  };
+
+  // Queue
+  patch.queue = {
+    shuffle: elements.queueShuffle.checked,
+    loop: elements.queueLoop.value,
+    avoidRepeat: Number(elements.queueAvoidRepeat.value) || 0,
+    enforceQueue: elements.enforceQueue.checked,
+  };
+
+  // Sleep Timer
+  const sleepMode = document.querySelector('input[name="sleepMode"]:checked');
+  patch.sleepTimer = {
+    mode: sleepMode ? sleepMode.value : 'off',
+    minutes: Number(elements.sleepMinutes.value) || 30,
+    tracks: Number(elements.sleepTracks.value) || 10,
+  };
+
+  // Diagnostics
+  patch.diagnostics = {
+    verbose: elements.diagnosticsVerbose.checked,
+  };
+
+  return patch;
 }
 
 // Diagnostics
