@@ -7,58 +7,8 @@ import { getStorage, setStorage, STORAGE_KEYS } from './storage.js';
 const $ = (id) => document.getElementById(id);
 const $$ = (selector) => document.querySelectorAll(selector);
 
-// Elements
-const elements = {
-  // General
-  masterEnabled: $('#optMasterEnabled'),
-  popupSize: $$('input[name="popupSize"]'),
-  openYTM: $('#optOpenYTM'),
-  reloadExt: $('#optReloadExt'),
-
-  // Ads
-  adSkipEnabled: $('#optAdSkipEnabled'),
-  adSkipMinDelay: $('#optAdSkipMinDelay'),
-  adSkipMaxWait: $('#optAdSkipMaxWait'),
-
-  // Random
-  randomMode: $$('input[name="randomMode"]'),
-  randomMin: $('#optRandomMin'),
-  randomMax: $('#optRandomMax'),
-
-  // Queue
-  queueShuffle: $('#optQueueShuffle'),
-  queueLoop: $('#optQueueLoop'),
-  queueAvoidRepeat: $('#optQueueAvoidRepeat'),
-  enforceQueue: $('#optEnforceQueue'),
-
-  // Sleep
-  sleepMode: $$('input[name="sleepMode"]'),
-  sleepMinutes: $('#optSleepMinutes'),
-  sleepTracks: $('#optSleepTracks'),
-
-  // Diagnostics
-  diagnosticsVerbose: $('#optDiagnosticsVerbose'),
-  copyDiagnostics: $('#optCopyDiagnostics'),
-  clearDiagnostics: $('#optClearDiagnostics'),
-  diagnosticsPreview: $('#diagnosticsPreview'),
-
-  // Data
-  exportSettings: $('#optExportSettings'),
-  exportHistory: $('#optExportHistory'),
-  importFile: $('#optImportFile'),
-  importBtn: $('#optImportBtn'),
-  resetSettings: $('#optResetSettings'),
-  clearHistory: $('#optClearHistory'),
-
-  // About
-  aboutVersion: $('#aboutVersion'),
-  viewChangelog: $('#optViewChangelog'),
-  viewSource: $('#optViewSource'),
-
-  // Navigation
-  sidenavItems: $$('.sidenav-item'),
-  sections: $$('.section'),
-};
+// Elements cache (populated after DOM ready)
+let elements = {};
 
 // Toast helper
 function showToast(message, type = 'info') {
@@ -70,6 +20,65 @@ function showToast(message, type = 'info') {
   toast.textContent = message;
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 3000);
+}
+
+// Cache DOM elements
+function cacheElements() {
+  elements = {
+    // General
+    masterEnabled: $('#optMasterEnabled'),
+    popupSize: $$('input[name="popupSize"]'),
+    openYTM: $('#optOpenYTM'),
+    reloadExt: $('#optReloadExt'),
+
+    // Ads
+    adSkipEnabled: $('#optAdSkipEnabled'),
+    adSkipMinDelay: $('#optAdSkipMinDelay'),
+    adSkipMaxWait: $('#optAdSkipMaxWait'),
+
+    // Random
+    randomMode: $$('input[name="randomMode"]'),
+    randomMin: $('#optRandomMin'),
+    randomMax: $('#optRandomMax'),
+
+    // Queue
+    queueShuffle: $('#optQueueShuffle'),
+    queueLoop: $('#optQueueLoop'),
+    queueAvoidRepeat: $('#optQueueAvoidRepeat'),
+    enforceQueue: $('#optEnforceQueue'),
+
+    // Sleep
+    sleepMode: $$('input[name="sleepMode"]'),
+    sleepMinutes: $('#optSleepMinutes'),
+    sleepTracks: $('#optSleepTracks'),
+
+    // Diagnostics
+    diagnosticsVerbose: $('#optDiagnosticsVerbose'),
+    copyDiagnostics: $('#optCopyDiagnostics'),
+    clearDiagnostics: $('#optClearDiagnostics'),
+    diagnosticsPreview: $('#diagnosticsPreview'),
+
+    // Data
+    exportSettings: $('#optExportSettings'),
+    exportHistory: $('#optExportHistory'),
+    importFile: $('#optImportFile'),
+    importBtn: $('#optImportBtn'),
+    resetSettings: $('#optResetSettings'),
+    clearHistory: $('#optClearHistory'),
+
+    // About
+    aboutVersion: $('#aboutVersion'),
+    viewChangelog: $('#optViewChangelog'),
+    viewSource: $('#optViewSource'),
+
+    // Navigation
+    sidenavItems: $$('.sidenav-item'),
+    sections: $$('.section'),
+
+    // Footer
+    saveSettingsBtn: $('#optSaveSettings'),
+    saveStatusEl: $('#optSaveStatus'),
+  };
 }
 
 // Navigation
@@ -109,7 +118,7 @@ async function loadForm() {
   elements.queueShuffle.checked = settings.queue.shuffle;
   elements.queueLoop.value = settings.queue.loop;
   elements.queueAvoidRepeat.value = settings.queue.avoidRepeat;
-  elements.enforceQueue.checked = true; // Hardcoded for now, could be a setting
+  elements.enforceQueue.checked = settings.queue.enforceQueue ?? true;
 
   // Sleep
   elements.sleepMode.forEach((r) => {
@@ -267,18 +276,17 @@ function setupBindings() {
   });
 
   // Save button
-  const saveBtn = $('#optSaveSettings');
-  const saveStatus = $('#optSaveStatus');
-  if (saveBtn && saveStatus) {
+  const saveBtn = elements.saveSettingsBtn;
+  const statusEl = elements.saveStatusEl;
+  if (saveBtn && statusEl) {
     saveBtn.addEventListener('click', saveAllSettings);
   }
 }
 
 // Save all settings from form
 async function saveAllSettings() {
-  const saveBtn = $('#optSaveSettings');
-  const saveStatus = $('#optSaveSettings');
-  const statusEl = $('#optSaveStatus');
+  const saveBtn = elements.saveSettingsBtn;
+  const statusEl = elements.saveStatusEl;
   if (!saveBtn || !statusEl) return;
 
   // Collect all form values into a patch
@@ -490,6 +498,7 @@ async function clearHistory() {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+  cacheElements();
   setupNavigation();
   setupBindings();
   await loadForm();
