@@ -2,7 +2,7 @@
 
 import { refreshQueueUI, setupPlaybackControls, setupQueueEditor } from './queue-ui.js';
 import { loadHistory, setupClearHistory, setupExportCsv } from './history-ui.js';
-import { setupQuickToggles, setupSizeSelector, setupOptionsButton, setupTabs } from './settings.js';
+import { setupQuickToggles, setupSizeSelector, setupOptionsButton, setupTabs, forceRefreshSettings } from './settings.js';
 import { setupNowPlaying } from './now-playing.js';
 import { setupMasterToggle } from './master.js';
 import { setStatus, applyExtensionEnabled } from './ui.js';
@@ -29,6 +29,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Options page button
   setupOptionsButton();
+
+  // Refresh button (manual sync)
+  const refreshBtn = $('refreshBtn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', async () => {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = '⟳';
+      try {
+        await forceRefreshSettings();
+        setStatus('Pengaturan disinkronkan');
+      } catch (e) {
+        setStatus('Sinkronisasi gagal', true);
+      } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = '⟳';
+      }
+    });
+  }
 
   // Playback controls (in now-playing card)
   setupPlaybackControls();

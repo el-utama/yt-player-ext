@@ -133,7 +133,56 @@ export function setupQuickToggles() {
         if (chk) chk.checked = s.queue.shuffle;
       }
     }
+    // Also handle legacy key changes (for backward compatibility)
+    if (changes[STORAGE_KEYS.RANDOM_ENABLED]) {
+      const mode = changes[STORAGE_KEYS.RANDOM_ENABLED].newValue === true ? 'queue' : 'off';
+      updateRandomModeUI(mode);
+    }
+    if (changes[STORAGE_KEYS.SHUFFLE_ENABLED]) {
+      const loop = changes[STORAGE_KEYS.SHUFFLE_ENABLED].newValue === true ? 'one' : 'off';
+      // Note: legacy key only tracks shuffle, not loop mode
+    }
   });
+
+  // Fallback: periodic sync in case storage listener misses changes
+  setInterval(syncFromStorage, 2000);
+}
+
+/**
+ * Force refresh UI from storage (callable from console or other modules)
+ */
+export async function forceRefreshSettings() {
+  await syncFromStorage();
+}
+
+/**
+ * Read current settings from storage and update UI
+ */
+async function syncFromStorage() {
+  const data = await getStorage(['settings', STORAGE_KEYS.RANDOM_ENABLED, STORAGE_KEYS.SHUFFLE_ENABLED]);
+  if (data.settings && typeof data.settings === 'object') {
+    if (data.settings.randomWatch && typeof data.settings.randomWatch.mode === 'string') {
+      updateRandomModeUI(data.settings.randomWatch.mode);
+    }
+    if (data.settings.queue && typeof data.settings.queue.loop === 'string') {
+      updateLoopModeUI(data.settings.queue.loop);
+    }
+    if (typeof data.settings.adSkip?.enabled === 'boolean') {
+      const chk = $('adSkipEnable');
+      if (chk) chk.checked = data.settings.adSkip.enabled;
+    }
+    if (typeof data.settings.queue?.shuffle === 'boolean') {
+      const chk = $('shuffleEnable');
+      if (chk) chk.checked = data.settings.queue.shuffle;
+    }
+  } else {
+    // Legacy fallback
+    if (data[STORAGE_KEYS.RANDOM_ENABLED] === true) {
+      updateRandomModeUI('queue');
+    } else if (data[STORAGE_KEYS.RANDOM_ENABLED] === false) {
+      updateRandomModeUI('off');
+    }
+  }
 }
 
 /**
