@@ -30,8 +30,11 @@ export function setupMasterToggle() {
   });
 
   // Load initial state
-  getStorage([STORAGE_KEYS.EXTENSION_ENABLED]).then(({ extensionEnabled }) => {
-    applyExtensionEnabled(extensionEnabled !== false);
+  getStorage(['settings', STORAGE_KEYS.EXTENSION_ENABLED]).then(({ settings, extensionEnabled }) => {
+    const enabled = typeof settings?.masterEnabled === 'boolean'
+      ? settings.masterEnabled
+      : extensionEnabled !== false;
+    applyExtensionEnabled(enabled);
   });
 
   // Listen for storage changes (from options page or other popups)

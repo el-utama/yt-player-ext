@@ -1,6 +1,6 @@
 {
   "name": "yt-player-ext",
-  "version": "3.4.3",
+  "version": "3.4.4",
   "description": "YT Music Custom Player & Whitelist Scrobbler - Manifest V3 Chrome Extension",
   "type": "module",
   "scripts": {

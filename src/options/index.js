@@ -1,10 +1,10 @@
 // Options Page - Full settings management
 
-import { loadSettings, saveSettings, exportSettingsPayload, importSettingsPayload, DEFAULT_SETTINGS } from '../shared/settings.js';
+import { loadSettings, exportSettingsPayload, importSettingsPayload, DEFAULT_SETTINGS } from '../shared/settings.js';
 import { sendMessage } from '../shared/messaging.js';
 import { getStorage, setStorage, STORAGE_KEYS } from './storage.js';
 
-const $ = (id) => document.getElementById(id);
+const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
 
 // Elements cache (populated after DOM ready)
@@ -147,6 +147,41 @@ async function savePatch(patch) {
     showToast(`Gagal: ${error.message}`, 'error');
     await loadForm(); // Revert form
   }
+}
+
+// Keep the form in sync when another context (e.g. the popup) writes settings.
+let formSyncTimer = null;
+let pendingFormSync = false;
+
+function isFormControlFocused() {
+  const active = document.activeElement;
+  if (!active || active.tagName !== 'INPUT') return false;
+  // Only defer for fields with in-progress text; toggles can update safely.
+  return !['checkbox', 'radio', 'button', 'submit', 'reset', 'file'].includes(active.type);
+}
+
+function scheduleFormSync() {
+  if (isFormControlFocused()) {
+    // Do not overwrite a field the user is editing; refresh once focus leaves.
+    pendingFormSync = true;
+    return;
+  }
+  pendingFormSync = false;
+  clearTimeout(formSyncTimer);
+  formSyncTimer = setTimeout(() => {
+    void loadForm();
+  }, 120);
+}
+
+function watchSettingsChanges() {
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'local' || !changes.settings) return;
+    scheduleFormSync();
+  });
+
+  document.addEventListener('focusout', () => {
+    if (pendingFormSync) scheduleFormSync();
+  });
 }
 
 // Bind simple checkbox -> patch
@@ -467,7 +502,8 @@ async function importSettings(event) {
 
     if (!imported) throw new Error('Format JSON tidak valid atau skema tidak dikenali');
 
-    await saveSettings(imported);
+    const response = await sendMessage({ action: 'SET_SETTINGS', patch: imported });
+    if (!response.ok) throw new Error(response.error);
     showToast('Pengaturan diimpor', 'success');
     await loadForm();
   } catch (error) {
@@ -482,7 +518,8 @@ async function resetSettings() {
   if (!confirm('Yakin? Ini akan menghapus konfigurasi ad-skip, random, queue, sleep timer, dan diagnostik.')) return;
 
   try {
-    await saveSettings(DEFAULT_SETTINGS);
+    const response = await sendMessage({ action: 'SET_SETTINGS', patch: DEFAULT_SETTINGS });
+    if (!response.ok) throw new Error(response.error);
     showToast('Pengaturan direset ke default', 'success');
     await loadForm();
   } catch (error) {
@@ -501,5 +538,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   cacheElements();
   setupNavigation();
   setupBindings();
+  watchSettingsChanges();
   await loadForm();
 });

@@ -2,7 +2,7 @@
 
 import { getStorage, setStorage, STORAGE_KEYS } from './storage.js';
 import { sendMessage } from '../shared/messaging.js';
-import { $, setStatus } from './ui.js';
+import { $, setStatus, applyExtensionEnabled } from './ui.js';
 import { normalizeQueue } from '../shared/utils.js';
 
 /**

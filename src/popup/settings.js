@@ -50,8 +50,10 @@ export function setupQuickToggles() {
     });
 
     // Load initial
-    getStorage([STORAGE_KEYS.AD_SKIP_ENABLED]).then(({ adSkipEnabled }) => {
-      adSkipEnable.checked = adSkipEnabled !== false;
+    getStorage(['settings', STORAGE_KEYS.AD_SKIP_ENABLED]).then(({ settings, adSkipEnabled }) => {
+      adSkipEnable.checked = typeof settings?.adSkip?.enabled === 'boolean'
+        ? settings.adSkip.enabled
+        : adSkipEnabled !== false;
     });
   }
 
@@ -87,8 +89,10 @@ export function setupQuickToggles() {
       }
     });
 
-    getStorage([STORAGE_KEYS.SHUFFLE_ENABLED]).then(({ shuffleEnabled }) => {
-      shuffleEnable.checked = Boolean(shuffleEnabled);
+    getStorage(['settings', STORAGE_KEYS.SHUFFLE_ENABLED]).then(({ settings, shuffleEnabled }) => {
+      shuffleEnable.checked = typeof settings?.queue?.shuffle === 'boolean'
+        ? settings.queue.shuffle
+        : Boolean(shuffleEnabled);
     });
   }
 
@@ -138,10 +142,6 @@ export function setupQuickToggles() {
       const mode = changes[STORAGE_KEYS.RANDOM_ENABLED].newValue === true ? 'queue' : 'off';
       updateRandomModeUI(mode);
     }
-    if (changes[STORAGE_KEYS.SHUFFLE_ENABLED]) {
-      const loop = changes[STORAGE_KEYS.SHUFFLE_ENABLED].newValue === true ? 'one' : 'off';
-      // Note: legacy key only tracks shuffle, not loop mode
-    }
   });
 
   // Fallback: periodic sync in case storage listener misses changes
@@ -159,7 +159,12 @@ export async function forceRefreshSettings() {
  * Read current settings from storage and update UI
  */
 async function syncFromStorage() {
-  const data = await getStorage(['settings', STORAGE_KEYS.RANDOM_ENABLED, STORAGE_KEYS.SHUFFLE_ENABLED]);
+  const data = await getStorage([
+    'settings',
+    STORAGE_KEYS.RANDOM_ENABLED,
+    STORAGE_KEYS.SHUFFLE_ENABLED,
+    STORAGE_KEYS.POPUP_SIZE,
+  ]);
   if (data.settings && typeof data.settings === 'object') {
     if (data.settings.randomWatch && typeof data.settings.randomWatch.mode === 'string') {
       updateRandomModeUI(data.settings.randomWatch.mode);
@@ -174,6 +179,9 @@ async function syncFromStorage() {
     if (typeof data.settings.queue?.shuffle === 'boolean') {
       const chk = $('shuffleEnable');
       if (chk) chk.checked = data.settings.queue.shuffle;
+    }
+    if (POPUP_SIZES.includes(data.settings.ui?.popupSize)) {
+      applyPopupSizeUI(data.settings.ui.popupSize);
     }
   } else {
     // Legacy fallback
@@ -211,23 +219,59 @@ async function loadLoopMode() {
 /**
  * Size selector (S/M/L buttons)
  */
+const POPUP_SIZES = ['small', 'medium', 'large'];
+
+function normalizePopupSize(size) {
+  return POPUP_SIZES.includes(size) ? size : 'medium';
+}
+
+function applyPopupSizeUI(size) {
+  const next = normalizePopupSize(size);
+  applyPopupSize(next);
+  document.querySelectorAll('.size-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.size === next);
+  });
+  return next;
+}
+
+async function loadPopupSize() {
+  const data = await getStorage(['settings', STORAGE_KEYS.POPUP_SIZE]);
+  const stored = data.settings?.ui?.popupSize;
+  return normalizePopupSize(POPUP_SIZES.includes(stored) ? stored : data[STORAGE_KEYS.POPUP_SIZE]);
+}
+
 export function setupSizeSelector() {
   const sizeButtons = document.querySelectorAll('.size-btn');
   const applySize = async (size) => {
-    await setStorage({ [STORAGE_KEYS.POPUP_SIZE]: size });
-    applyPopupSize(size);
-    sizeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.size === size));
+    const next = normalizePopupSize(size);
+    applyPopupSizeUI(next);
+    const response = await sendMessage({ action: 'SET_SETTINGS', patch: { ui: { popupSize: next } } });
+    if (!response.ok) {
+      // Keep the preference usable even when the background is unavailable.
+      await setStorage({ [STORAGE_KEYS.POPUP_SIZE]: next });
+      setStatus(`Gagal menyimpan ukuran: ${response.error}`, true);
+    }
   };
 
   sizeButtons.forEach((btn) => {
     btn.addEventListener('click', () => applySize(btn.dataset.size));
   });
 
-  // Load initial size
-  (async () => {
-    const { popupSize } = await getStorage([STORAGE_KEYS.POPUP_SIZE]);
-    await applySize(popupSize || 'medium');
-  })();
+  // Load initial size from the canonical settings object (legacy fallback).
+  loadPopupSize().then(applyPopupSizeUI);
+
+  // Stay in sync with the options page and other popup instances.
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'local') return;
+    if (changes.settings) {
+      const size = changes.settings.newValue?.ui?.popupSize;
+      if (POPUP_SIZES.includes(size)) applyPopupSizeUI(size);
+    }
+    if (changes[STORAGE_KEYS.POPUP_SIZE]) {
+      const size = changes[STORAGE_KEYS.POPUP_SIZE].newValue;
+      if (POPUP_SIZES.includes(size)) applyPopupSizeUI(size);
+    }
+  });
 }
 
 /**

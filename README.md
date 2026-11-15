@@ -2,7 +2,7 @@
 
 Manifest V3 Chrome Extension untuk menjalankan antrean lagu berbasis teks di YouTube Music dan mencatat histori pemutaran lokal secara selektif.
 
-> **Current version:** `3.4.3`
+> **Current version:** `3.4.4`
 
 ## Bahasa / Language
 
@@ -448,6 +448,24 @@ Extension ini tidak menggunakan YouTube Data API dan tidak mengirim histori ke s
 
 ## Riwayat Perubahan
 
+### 3.4.4
+
+- **Fix: halaman Settings tidak berfungsi** — helper `$('#id')` memakai `getElementById`, sehingga semua elemen menjadi `null` dan inisialisasi berhenti dengan `Cannot read properties of null`. Sekarang memakai `querySelector`; form memuat nilai setting yang sebenarnya dan semua kontrol bisa menyimpan.
+- **Fix: sinkronisasi Settings ↔ popup** — ukuran popup ditulis ke `settings.ui.popupSize` (bukan hanya key lama `popupSize`), popup dan halaman Settings sama-sama mendengarkan `chrome.storage.onChanged` untuk update langsung, dan quick toggle membaca objek `settings` kanonis.
+- **Fix: `queue.enforceQueue` hilang** — normalisasi settings tidak lagi membuang "Paksa pemutaran antrean", sehingga pilihannya benar-benar tersimpan.
+- **Fix: daftar antrean kosong di popup** — `$` tidak di-import di `popup/index.js`; `ReferenceError` menghentikan sisa inisialisasi (render antrean, histori, kontrol playback, status, tombol refresh). Autoplay tetap jalan karena background/content tidak terpengaruh.
+- **Fix: race condition penulisan settings** — `loadSettings()` tidak lagi menulis balik dari context pembaca, dan `saveSettings()` diantrikan agar dua perubahan beruntun tidak saling menimpa.
+- **Tests baru** — `tests/settings.test.js` dan `tests/popup-modules.test.js` (kontrak settings, serialisasi tulisan, import helper popup).
+
+### 3.4.3
+
+- **Fix: Options page initialization** — Semua caching elemen dan pemasangan event listener dipindah ke dalam `DOMContentLoaded`; memperbaiki error `Cannot read properties of null (reading 'addEventListener')` saat halaman dibuka.
+
+### 3.4.2
+
+- **Fix: Popup sync** — `updateRandomModeUI`/`updateLoopModeUI` dipindah ke module scope agar `chrome.storage.onChanged` listener bisa akses; memperbaiki `ReferenceError: updateRandomModeUI is not defined`.
+- **Options Page: Manual Save** — Tombol "Simpan Perubahan" di footer dengan status visual (saving/success/error), toast notification, auto-reload form.
+
 ### 3.4.1
 
 - **Fix: Popup sync** — `updateRandomModeUI`/`updateLoopModeUI` dipindah ke module scope agar `chrome.storage.onChanged` listener bisa akses; memperbaiki `ReferenceError: updateRandomModeUI is not defined`.
@@ -852,12 +870,14 @@ The extension does not use the YouTube Data API and does not send scrobble histo
 
 ## Changelog
 
-### 3.4.2
+### 3.4.4
 
-- **Fix: Settings sync robustness** — Popup now has periodic sync fallback (2s), manual refresh button (⟳), and robust storage listener with legacy key support
-- **Popup: Manual refresh button (⟳)** — One-click sync from storage with visual feedback
-- **Popup: Force refresh API** — `forceRefreshSettings()` exported for debugging
-- **Storage listener hardened** — Handles both new `settings` object and legacy flat keys
+- **Fix: Settings page was non-functional** — the `$('#id')` helper used `getElementById`, so every cached element was `null` and initialization aborted with `Cannot read properties of null`. It now uses `querySelector`; the form loads real values and every control saves.
+- **Fix: Settings ↔ popup sync** — popup size is written to `settings.ui.popupSize` (not only the legacy `popupSize` key), popup and Settings both listen to `chrome.storage.onChanged` for live updates, and quick toggles read the canonical `settings` object.
+- **Fix: `queue.enforceQueue` was dropped** — settings normalization no longer discards "Enforce queue playback", so the option is actually persisted.
+- **Fix: empty queue list in the popup** — `$` was not imported in `popup/index.js`; the resulting `ReferenceError` aborted the rest of initialization (queue rendering, history, playback controls, status, refresh button). Autoplay kept working because background/content scripts were unaffected.
+- **Fix: settings write race** — `loadSettings()` no longer writes back from read-only contexts, and `saveSettings()` is serialized so two quick patches cannot overwrite each other.
+- **New tests** — `tests/settings.test.js` and `tests/popup-modules.test.js` (settings contract, serialized writes, popup helper imports).
 
 ### 3.4.3
 
@@ -866,7 +886,11 @@ The extension does not use the YouTube Data API and does not send scrobble histo
 
 ### 3.4.2
 
+- **Fix: Settings sync robustness** — Popup now has periodic sync fallback (2s), manual refresh button (⟳), and robust storage listener with legacy key support
 - **Fix: Popup sync** — `updateRandomModeUI`/`updateLoopModeUI` moved to module scope so `chrome.storage.onChanged` listener can access them; fixes `ReferenceError: updateRandomModeUI is not defined`.
+- **Popup: Manual refresh button (⟳)** — One-click sync from storage with visual feedback
+- **Popup: Force refresh API** — `forceRefreshSettings()` exported for debugging
+- **Storage listener hardened** — Handles both new `settings` object and legacy flat keys
 - **Options Page: Manual Save** — "Save Changes" button in footer with visual status (saving/success/error), toast notification, auto-reload form.
 
 ### 3.4.0

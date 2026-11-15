@@ -103,6 +103,7 @@ export function normalizeSettings(raw) {
       shuffle: bool(queueSource.shuffle, defaults.queue.shuffle),
       loop: oneOf(queueSource.loop, LOOP_MODES, defaults.queue.loop),
       avoidRepeat: numberIn(queueSource.avoidRepeat, 0, 50, defaults.queue.avoidRepeat),
+      enforceQueue: bool(queueSource.enforceQueue, defaults.queue.enforceQueue),
     },
     ui: {
       popupSize: oneOf(uiSource.popupSize, POPUP_SIZES, defaults.ui.popupSize),
@@ -194,6 +195,11 @@ export async function persistSettings(settings) {
 
 /**
  * Load settings, migrating 3.3.0 flat keys on first use.
+ *
+ * This is a pure read once `settings` exists: read contexts (popup, options,
+ * content script) must not write back a normalized copy, because that
+ * read-modify-write would race with a concurrent save from the background and
+ * could revert a change the user just made.
  */
 export async function loadSettings() {
   const legacyValues = Object.values(LEGACY_KEYS);
@@ -203,19 +209,24 @@ export async function loadSettings() {
     return persistSettings(migrateLegacySettings(stored));
   }
 
-  const normalized = normalizeSettings(stored[SETTINGS_KEY]);
-  if (JSON.stringify(normalized) !== JSON.stringify(stored[SETTINGS_KEY])) {
-    return persistSettings(normalized);
-  }
-  return normalized;
+  return normalizeSettings(stored[SETTINGS_KEY]);
 }
 
 /**
  * Merge a partial patch into the stored settings and persist the result.
+ *
+ * Writes are serialized so two quick patches (e.g. two controls changed at the
+ * same time) cannot read the same base object and overwrite each other.
  */
-export async function saveSettings(patch) {
-  const current = await loadSettings();
-  return persistSettings(mergeSettings(current, patch));
+let saveChain = Promise.resolve();
+
+export function saveSettings(patch) {
+  const run = saveChain.then(async () => {
+    const current = await loadSettings();
+    return persistSettings(mergeSettings(current, patch));
+  });
+  saveChain = run.catch(() => undefined);
+  return run;
 }
 
 export function exportSettingsPayload(settings) {

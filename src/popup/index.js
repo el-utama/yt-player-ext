@@ -5,7 +5,7 @@ import { loadHistory, setupClearHistory, setupExportCsv } from './history-ui.js'
 import { setupQuickToggles, setupSizeSelector, setupOptionsButton, setupTabs, forceRefreshSettings } from './settings.js';
 import { setupNowPlaying } from './now-playing.js';
 import { setupMasterToggle } from './master.js';
-import { setStatus, applyExtensionEnabled } from './ui.js';
+import { $, setStatus, applyExtensionEnabled } from './ui.js';
 import { getStorage, STORAGE_KEYS } from './storage.js';
 
 document.addEventListener('DOMContentLoaded', () => {
