@@ -10,6 +10,29 @@ const LOOP_MODES = ['off', 'all', 'one'];
 let currentRandomMode = 'off';
 let currentLoopMode = 'off';
 
+// Module-scoped UI update functions so they can be called from storage listener
+function updateRandomModeUI(mode) {
+  currentRandomMode = mode;
+  const btn = $('randomModeBtn');
+  const lbl = $('randomModeLabel');
+  if (btn) btn.value = mode;
+  if (lbl) {
+    const labels = { off: 'Random: off', queue: 'Random: antrean', all: 'Random: semua' };
+    lbl.textContent = labels[mode] || labels.off;
+  }
+}
+
+function updateLoopModeUI(mode) {
+  currentLoopMode = mode;
+  const btn = $('loopModeBtn');
+  const lbl = $('loopModeLabel');
+  if (btn) btn.value = mode;
+  if (lbl) {
+    const labels = { off: 'Loop: off', all: 'Loop: semua', one: 'Loop: satu' };
+    lbl.textContent = labels[mode] || labels.off;
+  }
+}
+
 /**
  * Quick toggles: ad-skip, random mode, shuffle, loop
  */
@@ -36,13 +59,6 @@ export function setupQuickToggles() {
   const randomModeBtn = $('randomModeBtn');
   const randomModeLabel = $('randomModeLabel');
   if (randomModeBtn && randomModeLabel) {
-    const updateRandomModeUI = (mode) => {
-      currentRandomMode = mode;
-      randomModeBtn.value = mode;
-      const labels = { off: 'Random: off', queue: 'Random: antrean', all: 'Random: semua' };
-      randomModeLabel.textContent = labels[mode] || labels.off;
-    };
-
     randomModeBtn.addEventListener('click', async () => {
       const nextIndex = (RANDOM_MODES.indexOf(currentRandomMode) + 1) % RANDOM_MODES.length;
       const nextMode = RANDOM_MODES[nextIndex];
@@ -80,13 +96,6 @@ export function setupQuickToggles() {
   const loopModeBtn = $('loopModeBtn');
   const loopModeLabel = $('loopModeLabel');
   if (loopModeBtn && loopModeLabel) {
-    const updateLoopModeUI = (mode) => {
-      currentLoopMode = mode;
-      loopModeBtn.value = mode;
-      const labels = { off: 'Loop: off', all: 'Loop: semua', one: 'Loop: satu' };
-      loopModeLabel.textContent = labels[mode] || labels.off;
-    };
-
     loopModeBtn.addEventListener('click', async () => {
       const nextIndex = (LOOP_MODES.indexOf(currentLoopMode) + 1) % LOOP_MODES.length;
       const nextMode = LOOP_MODES[nextIndex];
@@ -110,14 +119,10 @@ export function setupQuickToggles() {
       const s = changes.settings.newValue;
       if (!s || typeof s !== 'object') return;
       if (typeof s.randomWatch?.mode === 'string') {
-        const btn = $('randomModeBtn');
-        const lbl = $('randomModeLabel');
-        if (btn && lbl) updateRandomModeUI(s.randomWatch.mode);
+        updateRandomModeUI(s.randomWatch.mode);
       }
       if (typeof s.queue?.loop === 'string') {
-        const btn = $('loopModeBtn');
-        const lbl = $('loopModeLabel');
-        if (btn && lbl) updateLoopModeUI(s.queue.loop);
+        updateLoopModeUI(s.queue.loop);
       }
       if (typeof s.adSkip?.enabled === 'boolean') {
         const chk = $('adSkipEnable');
