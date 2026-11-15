@@ -2,7 +2,7 @@
 
 Manifest V3 Chrome Extension untuk menjalankan antrean lagu berbasis teks di YouTube Music dan mencatat histori pemutaran lokal secara selektif.
 
-> **Current version:** `3.4.0`
+> **Current version:** `3.4.1`
 
 ## Bahasa / Language
 
@@ -448,6 +448,11 @@ Extension ini tidak menggunakan YouTube Data API dan tidak mengirim histori ke s
 
 ## Riwayat Perubahan
 
+### 3.4.1
+
+- **Fix: Popup sync** — `updateRandomModeUI`/`updateLoopModeUI` dipindah ke module scope agar `chrome.storage.onChanged` listener bisa akses; memperbaiki `ReferenceError: updateRandomModeUI is not defined`.
+- **Options Page: Manual Save** — Tombol "Simpan Perubahan" di footer dengan status visual (saving/success/error), toast notification, auto-reload form.
+
 ### 3.4.0
 
 - **Settings v2 (nested `settings` object)** — single source of truth dengan migrasi otomatis dari flat keys 3.3.0; dual-write legacy keys selama 3.4.x untuk kompatibilitas mundur tab lama.
@@ -846,6 +851,27 @@ The extension does not use the YouTube Data API and does not send scrobble histo
 - Manifest V3 service workers may be suspended while idle. The extension reconciles the player tab whenever the worker wakes up, but service-worker restart should still be included in testing.
 
 ## Changelog
+
+### 3.4.1
+
+- **Fix: Popup sync** — `updateRandomModeUI`/`updateLoopModeUI` moved to module scope so `chrome.storage.onChanged` listener can access them; fixes `ReferenceError: updateRandomModeUI is not defined`.
+- **Options Page: Manual Save** — "Save Changes" button in footer with visual status (saving/success/error), toast notification, auto-reload form.
+
+### 3.4.0
+
+- **Settings v2 (nested `settings` object)** — single source of truth with automatic migration from 3.3.0 flat keys; dual-write legacy keys during 3.4.x for backward compatibility with old tabs.
+- **Full Options Page** — General, Ads, Random, Queue, Sleep Timer, Diagnostics, Data (Export/Import/Reset), About; inline validation, auto-save debounce, toast notifications.
+- **Compact Popup** — 3-tab layout (Player/Queue/History), Now Playing card with progress bar & badges, quick toggles (Ad-Skip, Random mode cycle, Shuffle, Loop cycle), settings gear opens Options Page.
+- **Now Playing pipeline** — content script sends throttled snapshots (2s heartbeat, on-change) to `chrome.storage.session` (local fallback); popup reads via `storage.onChanged` (no polling).
+- **Random native** — `randomWatch.mode: off | queue | all`; mode `all` clicks YouTube Music's native Next button, fallback `seek(duration - 0.25)`.
+- **Loop & Shuffle (extension queue only)** — bag-based shuffle (display order preserved), `loop: off | all | one`, `avoidRepeat` (0–50), `navHistory` for Previous; loop-one replays same video with new `sessionId`.
+- **Keyboard shortcuts** — `Ctrl+Shift+Space` Play/Pause, `Ctrl+Shift+Right/Left` Next/Prev, `Ctrl+Shift+A` Toggle Ad-Skip; `chrome.commands.onCommand` in background.
+- **Sleep Timer** — mode `minutes` (eligible seconds) / `tracks`; completion → pause + status `sleep_timer_done`.
+- **Diagnostics panel** — ring buffer 20 events in session storage, Copy Log button, counters for ad-skip/scrobble/random/native.
+- **Export/Import settings** — JSON `{schema, exportedAt, settings}`; import validates + clamps; history remains CSV.
+- **Popup size fix** — `data-popup-size` on `<html>` (not `body`); S 210px, M 280px, L 360px, max-height 580px internal scroll.
+- **Highlight bug fix** — class `is-current` (was `current` vs `.active-track` mismatch).
+- **CI + build-drift check** — GitHub Actions workflow: test, lint, build, artifact diff check; release ZIP + SHA256.
 
 ### 3.3.0
 
