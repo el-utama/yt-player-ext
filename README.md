@@ -2,7 +2,7 @@
 
 Manifest V3 Chrome Extension untuk menjalankan antrean lagu berbasis teks di YouTube Music dan mencatat histori pemutaran lokal secara selektif.
 
-> **Current version:** `3.4.2`
+> **Current version:** `3.4.3`
 
 ## Bahasa / Language
 
@@ -859,14 +859,12 @@ The extension does not use the YouTube Data API and does not send scrobble histo
 - **Popup: Force refresh API** — `forceRefreshSettings()` exported for debugging
 - **Storage listener hardened** — Handles both new `settings` object and legacy flat keys
 
+### 3.4.3
+
+- **Fix: Options page initialization** — Move all element caching and event listener setup inside `DOMContentLoaded` handler; fixes `Cannot read properties of null (reading 'addEventListener')` error on load
+- **Options page: Robust element caching** — `cacheElements()` called after DOM ready before any event listeners attached
+
 ### 3.4.2
-
-- **Fix: Settings sync robustness** — Popup now has periodic sync fallback (2s), manual refresh button (⟳), and robust storage listener with legacy key support
-- **Popup: Manual refresh button (⟳)** — One-click sync from storage with visual feedback
-- **Popup: Force refresh API** — `forceRefreshSettings()` exported for debugging
-- **Storage listener hardened** — Handles both new `settings` object and legacy flat keys
-
-### 3.4.1
 
 - **Fix: Popup sync** — `updateRandomModeUI`/`updateLoopModeUI` moved to module scope so `chrome.storage.onChanged` listener can access them; fixes `ReferenceError: updateRandomModeUI is not defined`.
 - **Options Page: Manual Save** — "Save Changes" button in footer with visual status (saving/success/error), toast notification, auto-reload form.

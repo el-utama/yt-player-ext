@@ -38,7 +38,7 @@ function badgeFor(enabled) {
 
 test('manifest version and MV3 action are present', () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, '3.4.2');
+  assert.equal(manifest.version, '3.4.3');
   assert.ok(manifest.action, 'manifest.action must exist for badge support');
   assert.ok(manifest.permissions.includes('scripting'), 'scripting permission is required by pausePlayer()');
   assert.ok(manifest.options_ui, 'options_ui must be present');
