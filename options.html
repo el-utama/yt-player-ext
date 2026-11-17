@@ -17,6 +17,7 @@
       <button type="button" class="sidenav-item active" data-section="general">Umum</button>
       <button type="button" class="sidenav-item" data-section="ads">Iklan</button>
       <button type="button" class="sidenav-item" data-section="random">Random</button>
+      <button type="button" class="sidenav-item" data-section="scrollsim">Scroll Sim</button>
       <button type="button" class="sidenav-item" data-section="queue">Antrean</button>
       <button type="button" class="sidenav-item" data-section="sleep">Sleep Timer</button>
       <button type="button" class="sidenav-item" data-section="diagnostics">Diagnostik</button>
@@ -106,6 +107,45 @@
             </label>
           </div>
           <p class="field-hint">Durasi acak dipilih per lagu. Min ≤ Max. 0 = tidak dibatasi.</p>
+        </fieldset>
+      </section>
+
+      <!-- Scroll Simulation -->
+      <section id="section-scrollsim" class="section" aria-labelledby="scrollsim-title">
+        <h2 id="scrollsim-title">Simulasi Scroll (Anti "Video dijeda")</h2>
+        <fieldset>
+          <legend>Aktifkan</legend>
+          <label class="field">
+            <input id="optScrollSimEnabled" type="checkbox" role="switch" checked>
+            <span>Simulasi scroll seperti manusia</span>
+            <span class="field-hint">Mencegah notifikasi "Video dijeda — Lanjut menonton?" pada lagu panjang dengan mensimulasikan aktivitas user</span>
+          </label>
+        </fieldset>
+        <fieldset>
+          <legend>Interval & Durasi</legend>
+          <div class="field-row">
+            <label class="field">
+              <span>Min Menit</span>
+              <input id="optScrollSimMinMinutes" type="number" min="1" max="1440" step="1" value="15">
+              <span class="field-hint">Waktu minimum sebelum simulasi (acak antara min~max)</span>
+            </label>
+            <label class="field">
+              <span>Max Menit</span>
+              <input id="optScrollSimMaxMinutes" type="number" min="1" max="1440" step="1" value="20">
+              <span class="field-hint">Waktu maksimum sebelum simulasi</span>
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="field">
+              <span>Durasi Simulasi (detik)</span>
+              <input id="optScrollSimDuration" type="number" min="1" max="60" step="1" value="5">
+              <span class="field-hint">Berapa lama simulasi scroll aktif berjalan</span>
+            </label>
+          </div>
+          <p class="field-hint" style="margin-top: 8px;">
+            Interval acak antara <b>min~max menit</b>. Simulasi: scroll acak ±50–150px + wheel event + mousemove selama <b>durasi detik</b>.
+            Hanya aktif saat video diputar & durasi video ≥ 5 menit.
+          </p>
         </fieldset>
       </section>
 

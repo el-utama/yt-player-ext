@@ -60,6 +60,22 @@ export const state = {
   adSavedPlaybackRate: 1,
   adBadge: '',
   adSkipMaxWaitReported: false,
+
+  // Search fallback state
+  searchPhase: 'done', // 'normal' | 'songs_filter' | 'done'
+  searchPhaseAttempts: 0,
+  filterSwitchAttempted: false,
+
+  // Scroll simulation state
+  scrollSimulationEnabled: true,
+  scrollSimMinMinutes: 15,
+  scrollSimMaxMinutes: 20,
+  scrollSimDurationSeconds: 5,
+  scrollSimIntervalMs: 800,
+  scrollSimScrollAmountPx: { min: 50, max: 150 },
+  lastUserActivityAt: Date.now(),
+  nextScrollSimulationAt: 0,
+  scrollSimulationActive: false,
 };
 
 /**
@@ -122,10 +138,41 @@ export function setEnabled(enabled) {
     state.selecting = false;
     state.advancing = false;
     state.eligibleSeconds = 0;
+    state.scrollSimulationActive = false;
     if (state.selectInterval) {
       clearInterval(state.selectInterval);
       state.selectInterval = null;
     }
+  }
+}
+
+/**
+ * Initialize or reset scroll simulation timer
+ * Call when track starts playing or settings change
+ */
+export function resetScrollSimulationTimer() {
+  if (!state.scrollSimulationEnabled) {
+    state.nextScrollSimulationAt = 0;
+    return;
+  }
+  const minMs = state.scrollSimMinMinutes * 60 * 1000;
+  const maxMs = state.scrollSimMaxMinutes * 60 * 1000;
+  const delay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+  state.nextScrollSimulationAt = Date.now() + delay;
+  state.lastUserActivityAt = Date.now();
+}
+
+/**
+ * Record user activity (click, scroll, keypress) to reset idle timer
+ */
+export function recordUserActivity() {
+  state.lastUserActivityAt = Date.now();
+  // Reschedule next simulation based on new activity time
+  if (state.scrollSimulationEnabled && !state.scrollSimulationActive) {
+    const minMs = state.scrollSimMinMinutes * 60 * 1000;
+    const maxMs = state.scrollSimMaxMinutes * 60 * 1000;
+    const delay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+    state.nextScrollSimulationAt = state.lastUserActivityAt + delay;
   }
 }
 

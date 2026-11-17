@@ -4,7 +4,7 @@
 // every 500 ms tick. Settings are loaded once, then refreshed whenever the
 // background/options page writes the `settings` key.
 
-import { state, setEnabled } from './state.js';
+import { state, setEnabled, resetScrollSimulationTimer } from './state.js';
 import { loadSettings, normalizeSettings, SETTINGS_KEY } from '../shared/settings.js';
 
 /**
@@ -18,6 +18,10 @@ export function applySettings(settings) {
   const prevRandomMode = state.randomWatchMode;
   const prevMin = state.randomMinSeconds;
   const prevMax = state.randomMaxSeconds;
+
+  const prevScrollSimEnabled = state.scrollSimulationEnabled;
+  const prevScrollSimMin = state.scrollSimMinMinutes;
+  const prevScrollSimMax = state.scrollSimMaxMinutes;
 
   state.settings = normalized;
   state.settingsReady = true;
@@ -35,6 +39,14 @@ export function applySettings(settings) {
   state.shuffleEnabled = normalized.queue.shuffle;
   state.enforceQueue = normalized.queue.enforceQueue ?? true;
 
+  // Scroll simulation settings
+  state.scrollSimulationEnabled = normalized.scrollSimulation.enabled;
+  state.scrollSimMinMinutes = normalized.scrollSimulation.minMinutes;
+  state.scrollSimMaxMinutes = normalized.scrollSimulation.maxMinutes;
+  state.scrollSimDurationSeconds = normalized.scrollSimulation.durationSeconds;
+  state.scrollSimIntervalMs = normalized.scrollSimulation.scrollIntervalMs;
+  state.scrollSimScrollAmountPx = normalized.scrollSimulation.scrollAmountPx;
+
   setEnabled(normalized.masterEnabled !== false);
 
   // If random settings changed while a track is playing, recompute target
@@ -43,6 +55,14 @@ export function applySettings(settings) {
     || prevMax !== state.randomMaxSeconds;
   if (randomChanged && state.randomEnabled) {
     import('./state.js').then(({ refreshRandomTarget }) => refreshRandomTarget());
+  }
+
+  // If scroll simulation settings changed, reset timer
+  const scrollSimChanged = prevScrollSimEnabled !== state.scrollSimulationEnabled
+    || prevScrollSimMin !== state.scrollSimMinMinutes
+    || prevScrollSimMax !== state.scrollSimMaxMinutes;
+  if (scrollSimChanged) {
+    resetScrollSimulationTimer();
   }
 
   return wasEnabled !== state.enabled;

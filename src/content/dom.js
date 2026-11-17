@@ -1,6 +1,6 @@
 // Content DOM - Selectors and DOM query functions
 
-import { SELECTORS, SEARCH_RENDERERS, AUTOPLAY_LABELS, AD_LABELS } from '../shared/constants.js';
+import { SELECTORS, SEARCH_RENDERERS, AUTOPLAY_LABELS, AD_LABELS, SEARCH_FILTER_CHIPS, SONGS_FILTER_LABELS } from '../shared/constants.js';
 import { state } from './state.js';
 
 /**
@@ -275,6 +275,87 @@ export function clickElement(el) {
   }
 
   fire(typeof MouseEvent !== 'undefined' ? MouseEvent : null, 'click');
+  return true;
+}
+
+/**
+ * Click the "Songs" filter chip on search results page
+ */
+export function clickSongsFilter() {
+  const chips = document.querySelectorAll(SEARCH_FILTER_CHIPS);
+  for (const chip of chips) {
+    const label = [
+      chip.getAttribute('aria-label'),
+      chip.getAttribute('title'),
+      chip.textContent,
+    ].filter(Boolean).join(' ').trim();
+
+    if (SONGS_FILTER_LABELS.test(label) && chip.offsetParent !== null && !chip.disabled) {
+      chip.click();
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Simulate human-like scrolling activity to prevent "Video paused" prompt
+ * Performs random scroll/wheel/mousemove actions for specified duration
+ */
+export function simulateHumanScroll(durationSeconds, scrollIntervalMs, scrollAmountRange) {
+  const startTime = Date.now();
+  const endTime = startTime + durationSeconds * 1000;
+  const video = document.querySelector('video');
+
+  const doScrollAction = () => {
+    if (Date.now() >= endTime) return false;
+
+    // Random scroll amount
+    const amount = Math.floor(Math.random() * (scrollAmountRange.max - scrollAmountRange.min + 1)) + scrollAmountRange.min;
+    const direction = Math.random() > 0.5 ? 1 : -1;
+
+    // 1. window.scrollBy (most reliable)
+    window.scrollBy(0, amount * direction);
+
+    // 2. wheel event on video element (if exists)
+    if (video) {
+      const wheelEvent = new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        deltaY: amount * direction * 0.5,
+        clientX: window.innerWidth / 2,
+        clientY: window.innerHeight / 2,
+      });
+      video.dispatchEvent(wheelEvent);
+    }
+
+    // 3. tiny mousemove (optional, more human-like)
+    const moveEvent = new MouseEvent('mousemove', {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      clientX: Math.random() * window.innerWidth,
+      clientY: Math.random() * window.innerHeight,
+    });
+    document.dispatchEvent(moveEvent);
+
+    return true;
+  };
+
+  // Initial action
+  doScrollAction();
+
+  // Repeat at interval
+  const intervalId = setInterval(() => {
+    if (!doScrollAction()) {
+      clearInterval(intervalId);
+    }
+  }, scrollIntervalMs);
+
+  // Cleanup after duration
+  setTimeout(() => clearInterval(intervalId), durationSeconds * 1000 + 100);
+
   return true;
 }
 

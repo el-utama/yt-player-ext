@@ -41,6 +41,12 @@ function cacheElements() {
     randomMin: $('#optRandomMin'),
     randomMax: $('#optRandomMax'),
 
+    // Scroll Simulation
+    scrollSimEnabled: $('#optScrollSimEnabled'),
+    scrollSimMinMinutes: $('#optScrollSimMinMinutes'),
+    scrollSimMaxMinutes: $('#optScrollSimMaxMinutes'),
+    scrollSimDuration: $('#optScrollSimDuration'),
+
     // Queue
     queueShuffle: $('#optQueueShuffle'),
     queueLoop: $('#optQueueLoop'),
@@ -113,6 +119,12 @@ async function loadForm() {
   });
   elements.randomMin.value = settings.randomWatch.minSeconds;
   elements.randomMax.value = settings.randomWatch.maxSeconds;
+
+  // Scroll Simulation
+  elements.scrollSimEnabled.checked = settings.scrollSimulation.enabled;
+  elements.scrollSimMinMinutes.value = settings.scrollSimulation.minMinutes;
+  elements.scrollSimMaxMinutes.value = settings.scrollSimulation.maxMinutes;
+  elements.scrollSimDuration.value = settings.scrollSimulation.durationSeconds;
 
   // Queue
   elements.queueShuffle.checked = settings.queue.shuffle;
@@ -278,6 +290,14 @@ function setupBindings() {
   elements.randomMin.dataset.pair = elements.randomMin.id;
   elements.randomMax.dataset.pair = elements.randomMin.id;
 
+  // Scroll Simulation
+  bindCheckbox(elements.scrollSimEnabled, 'scrollSimulation.enabled');
+  bindNumber(elements.scrollSimMinMinutes, 'scrollSimulation.minMinutes', { min: 1, max: 1440 });
+  bindNumber(elements.scrollSimMaxMinutes, 'scrollSimulation.maxMinutes', { min: 1, max: 1440, clampToMin: true });
+  bindNumber(elements.scrollSimDuration, 'scrollSimulation.durationSeconds', { min: 1, max: 60 });
+  elements.scrollSimMinMinutes.dataset.pair = elements.scrollSimMinMinutes.id;
+  elements.scrollSimMaxMinutes.dataset.pair = elements.scrollSimMinMinutes.id;
+
   // Queue
   bindCheckbox(elements.queueShuffle, 'queue.shuffle');
   bindSelect(elements.queueLoop, 'queue.loop');
@@ -385,6 +405,14 @@ function collectFormValues() {
     mode: randomMode ? randomMode.value : 'off',
     minSeconds: Number(elements.randomMin.value) || 0,
     maxSeconds: Number(elements.randomMax.value) || 0,
+  };
+
+  // Scroll Simulation
+  patch.scrollSimulation = {
+    enabled: elements.scrollSimEnabled.checked,
+    minMinutes: Number(elements.scrollSimMinMinutes.value) || 15,
+    maxMinutes: Number(elements.scrollSimMaxMinutes.value) || 20,
+    durationSeconds: Number(elements.scrollSimDuration.value) || 5,
   };
 
   // Queue

@@ -2,7 +2,7 @@
 
 Manifest V3 Chrome Extension untuk menjalankan antrean lagu berbasis teks di YouTube Music dan mencatat histori pemutaran lokal secara selektif.
 
-> **Current version:** `3.4.4`
+> **Current version:** `3.4.5`
 
 ## Bahasa / Language
 
@@ -448,6 +448,15 @@ Extension ini tidak menggunakan YouTube Data API dan tidak mengirim histori ke s
 
 ## Riwayat Perubahan
 
+### 3.4.5
+
+- **Fitur: Pencarian fallback ke filter "Songs"** — jika pencarian gagal menemukan hasil yang cocok (judul + artis), extension otomatis mengklik chip filter "Songs" dan mencoba lagi, karena beberapa lagu hanya muncul pada hasil filtered Songs.
+- **Fitur: Strict artist match** — jika queue berisi artis (mis. `"Porch Light - eL Utama"`), extension WAJIB menemukan hasil yang cocok artisnya; tidak akan autoplay lagu milik artis lain yang tidak ada di antrean.
+- **Fitur: Warning badge merah berkedip** — jika tidak ada lagu yang cocok bahkan setelah filter "Songs", badge ikon extension berubah merah dengan teks `!` berkedip selama 3 detik sebagai peringatan.
+- **Fitur: Simulasi scroll humana (anti "Video dijeda")** — mensimulasikan aktivitas scroll, wheel, dan mousemove secara acak setiap 15–20 menit (dapat diatur) selama 5 detik (dapat diatur) saat video panjang (>5 menit) diputar, untuk mencegah notifikasi YouTube "Video dijeda — Lanjut menonton?".
+- **Pengaturan baru: Scroll Simulation** — di Popup dan Options Page: toggle aktif/nonaktif, min menit, max menit, durasi simulasi (detik).
+- **Perbaikan: `search_no_exact_match` kini melaporkan phase** (`normal` atau `songs_filter`) agar lebih mudah di-debug.
+
 ### 3.4.4
 
 - **Fix: halaman Settings tidak berfungsi** — helper `$('#id')` memakai `getElementById`, sehingga semua elemen menjadi `null` dan inisialisasi berhenti dengan `Cannot read properties of null`. Sekarang memakai `querySelector`; form memuat nilai setting yang sebenarnya dan semua kontrol bisa menyimpan.
@@ -869,6 +878,15 @@ The extension does not use the YouTube Data API and does not send scrobble histo
 - Manifest V3 service workers may be suspended while idle. The extension reconciles the player tab whenever the worker wakes up, but service-worker restart should still be included in testing.
 
 ## Changelog
+
+### 3.4.5
+
+- **Feature: Search fallback to "Songs" filter** — if the search fails to find a matching result (title + artist), the extension automatically clicks the "Songs" filter chip and retries, because some songs only appear in filtered Songs results.
+- **Feature: Strict artist match** — if the queue includes an artist (e.g. `"Porch Light - eL Utama"`), the extension must find a result that matches that artist; it will not autoplay a song by a different artist not in the queue.
+- **Feature: Red flashing warning badge** — if no matching song is found even after the "Songs" filter, the extension icon badge turns red with text `!` flashing for 3 seconds as a warning.
+- **Feature: Human-like scroll simulation (anti "Video paused")** — simulates scroll, wheel, and mousemove activity at random intervals every 15–20 minutes (configurable) for 5 seconds (configurable) while a long video (>5 minutes) is playing, to prevent YouTube's "Video paused — Continue watching?" prompt.
+- **New setting: Scroll Simulation** — in Popup and Options Page: enable/disable toggle, min minutes, max minutes, simulation duration in seconds.
+- **Fix: `search_no_exact_match` now reports the phase** (`normal` or `songs_filter`) for easier debugging.
 
 ### 3.4.4
 

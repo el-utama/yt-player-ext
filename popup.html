@@ -79,6 +79,33 @@
       </div>
     </fieldset>
 
+    <fieldset class="scroll-sim-settings" aria-label="Simulasi Scroll">
+      <legend>Simulasi Scroll (Anti "Video dijeda")</legend>
+      <div class="toggle-grid">
+        <label class="toggle-row">
+          <input id="scrollSimEnable" type="checkbox" checked>
+          <span>Aktifkan</span>
+        </label>
+      </div>
+      <div class="input-grid">
+        <label class="input-row">
+          <span>Min menit</span>
+          <input id="scrollSimMinMinutes" type="number" min="1" max="1440" value="15" step="1">
+        </label>
+        <label class="input-row">
+          <span>Max menit</span>
+          <input id="scrollSimMaxMinutes" type="number" min="1" max="1440" value="20" step="1">
+        </label>
+        <label class="input-row">
+          <span>Durasi (detik)</span>
+          <input id="scrollSimDuration" type="number" min="1" max="60" value="5" step="1">
+        </label>
+      </div>
+      <p class="hint" style="margin-top: 6px; font-size: 11px; color: var(--muted);">
+        Scroll acak setiap <b>min~max menit</b> selama <b>durasi detik</b> untuk mencegah notifikasi "Video dijeda"
+      </p>
+    </fieldset>
+
     <fieldset class="queue-editor" aria-label="Tambah ke antrean">
       <legend>Antrean Baru</legend>
       <textarea id="songList" maxlength="20000" placeholder="Satu lagu per baris. Contoh: Demons - Jacob Lee&#10;Gamelan Reggae - eL Utama" aria-label="Daftar lagu"></textarea>

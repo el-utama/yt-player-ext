@@ -19,6 +19,55 @@ export async function updateExtensionBadge(enabled) {
 }
 
 /**
+ * Flash the extension badge red to warn the user (e.g. search found no match).
+ * Flashes "!" for ~3 seconds, then restores the normal badge state.
+ */
+let warningFlashTimer = null;
+let warningFlashState = false;
+
+export async function flashWarningBadge(details = '') {
+  try {
+    // Stop any existing flash
+    if (warningFlashTimer) {
+      clearInterval(warningFlashTimer);
+      warningFlashTimer = null;
+    }
+
+    await chrome.action.setBadgeText({ text: '!' });
+    await chrome.action.setBadgeBackgroundColor({ color: '#d93025' });
+    await chrome.action.setTitle({
+      title: `YT Music Scrobbler — Peringatan: ${details || 'Lagu tidak ditemukan'}`.slice(0, 100),
+    });
+
+    warningFlashState = false;
+    warningFlashTimer = setInterval(async () => {
+      warningFlashState = !warningFlashState;
+      try {
+        await chrome.action.setBadgeText({ text: warningFlashState ? '!' : '' });
+      } catch (_err) {
+        // ignore
+      }
+    }, 500);
+
+    // Auto-stop after 3 seconds and restore normal badge
+    setTimeout(() => {
+      if (warningFlashTimer) {
+        clearInterval(warningFlashTimer);
+        warningFlashTimer = null;
+      }
+      try {
+        chrome.action.setBadgeText({ text: '' });
+        chrome.action.setBadgeBackgroundColor({ color: '#555555' });
+      } catch (_err) {
+        // ignore
+      }
+    }, 3000);
+  } catch (_err) {
+    // Badge API may not be available, ignore
+  }
+}
+
+/**
  * Refresh badge from storage
  */
 export async function refreshExtensionBadge(getStorageFn) {

@@ -2,6 +2,20 @@
 
 export const MIN_SCROBBLE_SECONDS = 30;
 
+// Search filter chips (for "Songs" fallback)
+export const SEARCH_FILTER_CHIPS = 'yt-chip-cloud-chip-renderer, ytmusic-filter-chip, ytmusic-chip-cloud-chip-renderer';
+export const SONGS_FILTER_LABELS = /^songs?$/i; // "Songs" atau "Song"
+
+// Default scroll simulation configuration
+export const SCROLL_SIMULATION_DEFAULTS = {
+  enabled: true,
+  minMinutes: 15,
+  maxMinutes: 20,
+  durationSeconds: 5,
+  scrollIntervalMs: 800,
+  scrollAmountPx: { min: 50, max: 150 },
+};
+
 export const SELECTORS = {
   resultPlayButton: 'ytmusic-responsive-list-item-renderer .play-button',
   playerTitle: '.title.ytmusic-player-bar, ytmusic-player-bar .title',

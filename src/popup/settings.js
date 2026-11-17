@@ -11,6 +11,22 @@ let currentRandomMode = 'off';
 let currentLoopMode = 'off';
 
 // Module-scoped UI update functions so they can be called from storage listener
+
+function updateScrollSimUI(settings) {
+  const s = settings?.scrollSimulation;
+  if (!s || typeof s !== 'object') return;
+
+  const enableChk = $('scrollSimEnable');
+  const minInput = $('scrollSimMinMinutes');
+  const maxInput = $('scrollSimMaxMinutes');
+  const durInput = $('scrollSimDuration');
+
+  if (enableChk) enableChk.checked = s.enabled !== false;
+  if (minInput) minInput.value = s.minMinutes ?? 15;
+  if (maxInput) maxInput.value = s.maxMinutes ?? 20;
+  if (durInput) durInput.value = s.durationSeconds ?? 5;
+}
+
 function updateRandomModeUI(mode) {
   currentRandomMode = mode;
   const btn = $('randomModeBtn');
@@ -116,6 +132,9 @@ export function setupQuickToggles() {
     loadLoopMode().then(updateLoopModeUI);
   }
 
+  // Scroll Simulation settings
+  setupScrollSimSettings();
+
   // Listen for settings changes from options page / other popups
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName !== 'local') return;
@@ -135,6 +154,9 @@ export function setupQuickToggles() {
       if (typeof s.queue?.shuffle === 'boolean') {
         const chk = $('shuffleEnable');
         if (chk) chk.checked = s.queue.shuffle;
+      }
+      if (s.scrollSimulation) {
+        updateScrollSimUI(s);
       }
     }
     // Also handle legacy key changes (for backward compatibility)
@@ -179,6 +201,9 @@ async function syncFromStorage() {
     if (typeof data.settings.queue?.shuffle === 'boolean') {
       const chk = $('shuffleEnable');
       if (chk) chk.checked = data.settings.queue.shuffle;
+    }
+    if (data.settings.scrollSimulation) {
+      updateScrollSimUI(data.settings);
     }
     if (POPUP_SIZES.includes(data.settings.ui?.popupSize)) {
       applyPopupSizeUI(data.settings.ui.popupSize);
@@ -266,12 +291,79 @@ export function setupSizeSelector() {
     if (changes.settings) {
       const size = changes.settings.newValue?.ui?.popupSize;
       if (POPUP_SIZES.includes(size)) applyPopupSizeUI(size);
+      // Also update scroll sim UI if settings changed
+      if (changes.settings.newValue?.scrollSimulation) {
+        updateScrollSimUI(changes.settings.newValue);
+      }
     }
     if (changes[STORAGE_KEYS.POPUP_SIZE]) {
       const size = changes[STORAGE_KEYS.POPUP_SIZE].newValue;
       if (POPUP_SIZES.includes(size)) applyPopupSizeUI(size);
     }
   });
+}
+
+/**
+ * Scroll Simulation settings
+ */
+function setupScrollSimSettings() {
+  const enableChk = $('scrollSimEnable');
+  const minInput = $('scrollSimMinMinutes');
+  const maxInput = $('scrollSimMaxMinutes');
+  const durInput = $('scrollSimDuration');
+
+  if (!enableChk || !minInput || !maxInput || !durInput) return;
+
+  // Enable toggle
+  enableChk.addEventListener('change', async () => {
+    const settings = { scrollSimulation: { enabled: enableChk.checked } };
+    const response = await sendMessage({ action: 'SET_SETTINGS', patch: settings });
+    if (!response.ok) {
+      enableChk.checked = !enableChk.checked;
+      setStatus(`Gagal: ${response.error}`, true);
+    }
+  });
+
+  // Min minutes
+  minInput.addEventListener('change', async () => {
+    const value = Math.min(parseInt(maxInput.value, 10) || 1440, Math.max(1, parseInt(minInput.value, 10) || 1));
+    minInput.value = value;
+    const settings = { scrollSimulation: { minMinutes: value } };
+    const response = await sendMessage({ action: 'SET_SETTINGS', patch: settings });
+    if (!response.ok) setStatus(`Gagal: ${response.error}`, true);
+  });
+
+  // Max minutes
+  maxInput.addEventListener('change', async () => {
+    const value = Math.max(parseInt(minInput.value, 10) || 1, Math.min(1440, parseInt(maxInput.value, 10) || 1440));
+    maxInput.value = value;
+    const settings = { scrollSimulation: { maxMinutes: value } };
+    const response = await sendMessage({ action: 'SET_SETTINGS', patch: settings });
+    if (!response.ok) setStatus(`Gagal: ${response.error}`, true);
+  });
+
+  // Duration
+  durInput.addEventListener('change', async () => {
+    const value = Math.min(60, Math.max(1, parseInt(durInput.value, 10) || 5));
+    durInput.value = value;
+    const settings = { scrollSimulation: { durationSeconds: value } };
+    const response = await sendMessage({ action: 'SET_SETTINGS', patch: settings });
+    if (!response.ok) setStatus(`Gagal: ${response.error}`, true);
+  });
+
+  // Load initial from settings object
+  loadScrollSimSettings().then(updateScrollSimUI);
+}
+
+/**
+ * Load scroll simulation settings from settings object
+ */
+async function loadScrollSimSettings() {
+  const data = await getStorage(['settings']);
+  if (data.settings && typeof data.settings === 'object' && data.settings.scrollSimulation) {
+    return data.settings.scrollSimulation;
+  }
+  return null;
 }
 
 /**

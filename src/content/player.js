@@ -1,9 +1,9 @@
 // Content Player - Playback control, bind video, tryStartPlayback
 
 import { state } from './state.js';
-import { findPlayControl, getTrackTitle, isAdShowing, clickNativeNext } from './dom.js';
+import { findPlayControl, getTrackTitle, isAdShowing, clickNativeNext, simulateHumanScroll } from './dom.js';
 import { reportStatus } from '../shared/messaging.js';
-import { resetTrackState, MIN_SCROBBLE_SECONDS } from './state.js';
+import { resetTrackState, MIN_SCROBBLE_SECONDS, resetScrollSimulationTimer, recordUserActivity } from './state.js';
 import { getTrackIdentity, isWhitelisted } from '../shared/utils.js';
 import { advanceAfterDecision, maybeScrobble } from './scrobble.js';
 import { checkAndSkipAd, wasAdForcedRecently } from './ad-skip.js';
@@ -62,7 +62,10 @@ export function bindVideo(video) {
   }, { passive: true });
 
   video.addEventListener('canplay', () => tryStartPlayback(video), { passive: true });
-  video.addEventListener('play', () => reportStatus('playing'), { passive: true });
+  video.addEventListener('play', () => {
+    reportStatus('playing');
+    resetScrollSimulationTimer();
+  }, { passive: true });
   video.addEventListener('pause', () => reportStatus('paused'), { passive: true });
   video.addEventListener('ended', () => {
     // A forced ad skip ends the ad media itself; that `ended` event must not
@@ -217,4 +220,47 @@ export function tick() {
 
   // Keep the popup's now-playing card in sync
   reportNowPlaying();
+
+  // Scroll simulation to prevent "Video paused" prompt
+  handleScrollSimulation(video);
+}
+
+/**
+ * Handle human-like scroll simulation to prevent YouTube's "Video paused" prompt
+ */
+function handleScrollSimulation(video) {
+  if (!state.scrollSimulationEnabled) return;
+  if (state.scrollSimulationActive) return;
+  if (!video || video.paused || video.ended) return;
+
+  // Only simulate on longer tracks (>= 5 minutes) to avoid annoying on short videos
+  if (Number.isFinite(video.duration) && video.duration < 300) return;
+
+  const now = Date.now();
+  if (now < state.nextScrollSimulationAt) return;
+
+  // Check if user was recently active (within last 30 seconds)
+  if (now - state.lastUserActivityAt < 30000) {
+    // User active recently, reschedule
+    resetScrollSimulationTimer();
+    return;
+  }
+
+  // Start simulation
+  state.scrollSimulationActive = true;
+  reportStatus('scroll_simulation_start', `duration=${state.scrollSimDurationSeconds}s`);
+
+  simulateHumanScroll(
+    state.scrollSimDurationSeconds,
+    state.scrollSimIntervalMs,
+    state.scrollSimScrollAmountPx
+  );
+
+  // Mark simulation as done after duration + buffer
+  setTimeout(() => {
+    state.scrollSimulationActive = false;
+    // Schedule next simulation with random interval
+    resetScrollSimulationTimer();
+    reportStatus('scroll_simulation_end', `next_in~${Math.round((state.nextScrollSimulationAt - Date.now()) / 60000)}min`);
+  }, state.scrollSimDurationSeconds * 1000 + 500);
 }

@@ -23,6 +23,14 @@ export const DEFAULT_SETTINGS = Object.freeze({
   ui: Object.freeze({ popupSize: 'medium' }),
   sleepTimer: Object.freeze({ mode: 'off', minutes: 30, tracks: 10 }),
   diagnostics: Object.freeze({ verbose: false }),
+  scrollSimulation: Object.freeze({
+    enabled: true,
+    minMinutes: 15,
+    maxMinutes: 20,
+    durationSeconds: 5,
+    scrollIntervalMs: 800,
+    scrollAmountPx: { min: 50, max: 150 },
+  }),
 });
 
 // Flat keys written by 3.3.0. Mirrored on every save during 3.4.x.
@@ -48,6 +56,7 @@ function cloneDefaults() {
     ui: { ...DEFAULT_SETTINGS.ui },
     sleepTimer: { ...DEFAULT_SETTINGS.sleepTimer },
     diagnostics: { ...DEFAULT_SETTINGS.diagnostics },
+    scrollSimulation: { ...DEFAULT_SETTINGS.scrollSimulation },
   };
 }
 
@@ -79,12 +88,20 @@ export function normalizeSettings(raw) {
   const uiSource = source.ui && typeof source.ui === 'object' ? source.ui : {};
   const sleepSource = source.sleepTimer && typeof source.sleepTimer === 'object' ? source.sleepTimer : {};
   const diagnosticsSource = source.diagnostics && typeof source.diagnostics === 'object' ? source.diagnostics : {};
+  const scrollSimSource = source.scrollSimulation && typeof source.scrollSimulation === 'object' ? source.scrollSimulation : {};
 
   const minDelay = numberIn(adSkipSource.minDelay, 0, 60000, defaults.adSkip.minDelay);
   const maxWait = Math.max(minDelay, numberIn(adSkipSource.maxWait, 0, 120000, defaults.adSkip.maxWait));
 
   const minSeconds = numberIn(randomSource.minSeconds, 0, 3600, defaults.randomWatch.minSeconds);
   const maxSeconds = Math.max(minSeconds, numberIn(randomSource.maxSeconds, 0, 3600, defaults.randomWatch.maxSeconds));
+
+  const scrollMinMinutes = numberIn(scrollSimSource.minMinutes, 1, 1440, defaults.scrollSimulation.minMinutes);
+  const scrollMaxMinutes = Math.max(scrollMinMinutes, numberIn(scrollSimSource.maxMinutes, 1, 1440, defaults.scrollSimulation.maxMinutes));
+  const scrollDurationSeconds = numberIn(scrollSimSource.durationSeconds, 1, 60, defaults.scrollSimulation.durationSeconds);
+  const scrollIntervalMs = numberIn(scrollSimSource.scrollIntervalMs, 100, 5000, defaults.scrollSimulation.scrollIntervalMs);
+  const scrollAmountMin = numberIn(scrollSimSource.scrollAmountPx?.min, 1, 500, defaults.scrollSimulation.scrollAmountPx.min);
+  const scrollAmountMax = Math.max(scrollAmountMin, numberIn(scrollSimSource.scrollAmountPx?.max, 1, 500, defaults.scrollSimulation.scrollAmountPx.max));
 
   return {
     schema: SETTINGS_SCHEMA,
@@ -115,6 +132,14 @@ export function normalizeSettings(raw) {
     },
     diagnostics: {
       verbose: bool(diagnosticsSource.verbose, defaults.diagnostics.verbose),
+    },
+    scrollSimulation: {
+      enabled: bool(scrollSimSource.enabled, defaults.scrollSimulation.enabled),
+      minMinutes: scrollMinMinutes,
+      maxMinutes: scrollMaxMinutes,
+      durationSeconds: scrollDurationSeconds,
+      scrollIntervalMs,
+      scrollAmountPx: { min: scrollAmountMin, max: scrollAmountMax },
     },
   };
 }
@@ -177,6 +202,7 @@ export function mergeSettings(base, patch) {
     ui: { ...current.ui, ...(source.ui || {}) },
     sleepTimer: { ...current.sleepTimer, ...(source.sleepTimer || {}) },
     diagnostics: { ...current.diagnostics, ...(source.diagnostics || {}) },
+    scrollSimulation: { ...current.scrollSimulation, ...(source.scrollSimulation || {}) },
   });
 }
 

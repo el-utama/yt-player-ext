@@ -35,7 +35,15 @@ state.observer = new MutationObserver(() => {
 
 state.observer.observe(document.documentElement, { childList: true, subtree: true });
 
-// Periodic tick
+// User activity listeners for scroll simulation idle detection
+// Using passive listeners to not interfere with page performance
+const activityEvents = ['click', 'scroll', 'keydown', 'mousemove', 'touchstart', 'wheel'];
+const activityHandler = () => import('./state.js').then(({ recordUserActivity }) => recordUserActivity());
+for (const event of activityEvents) {
+  document.addEventListener(event, activityHandler, { passive: true, capture: true });
+}
+
+ // Periodic tick
 state.monitorTimer = setInterval(tick, 500);
 
 // Bootstrap: settings first, then navigation

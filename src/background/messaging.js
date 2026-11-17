@@ -8,6 +8,7 @@ import { nextTrack, previousTrack, playTrackAtIndex, sendControlToPlayer, ensure
 import { isPlayerSender } from '../shared/messaging.js';
 import { loadSettings, saveSettings } from '../shared/settings.js';
 import { normalizeQueue } from '../shared/utils.js';
+import { flashWarningBadge } from './badge.js';
 
 const CONTENT_ACTIONS = new Set([
   'TRACK_ENDED', 'NEXT_TRACK', 'SCROBBLE', 'PLAYBACK_STATUS', 'CONTENT_READY', 'NOW_PLAYING',
@@ -151,6 +152,12 @@ export async function handlePlaybackStatus(message) {
     [STORAGE_KEYS.PLAYBACK_STATUS]: message.status,
     [STORAGE_KEYS.PLAYBACK_DETAILS]: details,
   });
+
+  // Flash red warning badge when search finds no exact match even after
+  // Songs filter fallback — user needs to know the track wasn't played.
+  if (message.status === 'search_no_exact_match') {
+    void flashWarningBadge(details);
+  }
 
   const previous = await getEphemeral(STORAGE_KEYS.DIAGNOSTICS);
   const diagnostics = Array.isArray(previous) ? previous : [];
