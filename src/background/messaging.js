@@ -4,7 +4,7 @@ import { STORAGE_KEYS } from './storage.js';
 import { isExtensionEnabled } from './storage.js';
 import { getStorage, setStorage } from './storage.js';
 import { saveScrobble } from './scrobble.js';
-import { nextTrack, previousTrack, playTrackAtIndex, sendControlToPlayer, ensurePlayerTabId, getState } from './queue.js';
+import { nextTrack, previousTrack, playTrackAtIndex, sendControlToPlayer, ensurePlayerTabId, getState, finishQueue } from './queue.js';
 import { isPlayerSender } from '../shared/messaging.js';
 import { loadSettings, saveSettings } from '../shared/settings.js';
 import { normalizeQueue } from '../shared/utils.js';
@@ -255,6 +255,15 @@ export async function handleContentReady(sender) {
 }
 
 /**
+ * Handle FINISH_QUEUE message - stops extension queue and hands playback back to YouTube Music.
+ * Called when user clears/deletes the entire queue.
+ */
+export async function handleFinishQueue() {
+  await finishQueue(getStorage, setStorage, 'queue_cleared');
+  return { ok: true };
+}
+
+/**
  * Route a message to its handler and return the response object.
  */
 export async function handleMessage(message, sender) {
@@ -286,6 +295,8 @@ export async function handleMessage(message, sender) {
       return handleGetState();
     case 'CONTENT_READY':
       return handleContentReady(sender);
+    case 'FINISH_QUEUE':
+      return handleFinishQueue();
     default:
       return { ok: false, error: 'unknown-action' };
   }

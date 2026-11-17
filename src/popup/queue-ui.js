@@ -29,6 +29,19 @@ export async function refreshQueueUI() {
     if (index === data[STORAGE_KEYS.CURRENT_INDEX]) {
       li.classList.add('is-current');
     }
+
+    // Delete button per item
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'queue-delete-btn';
+    deleteBtn.title = `Hapus "${track}" dari antrean`;
+    deleteBtn.textContent = '🗑️';
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeQueueItem(index);
+    });
+    li.appendChild(deleteBtn);
+
     queueList.appendChild(li);
   });
 
@@ -42,12 +55,96 @@ export async function refreshQueueUI() {
 }
 
 /**
+ * Remove a single queue item at index
+ */
+async function removeQueueItem(index) {
+  const data = await getStorage([STORAGE_KEYS.QUEUE, STORAGE_KEYS.CURRENT_INDEX]);
+  const queue = normalizeQueue(data[STORAGE_KEYS.QUEUE]);
+  const currentIndex = data[STORAGE_KEYS.CURRENT_INDEX];
+
+  if (index < 0 || index >= queue.length) return;
+
+  const removedTrack = queue[index];
+  queue.splice(index, 1);
+
+  let newCurrentIndex = currentIndex;
+
+  if (currentIndex !== null && currentIndex !== undefined) {
+    if (index === currentIndex) {
+      // Deleting the currently playing track
+      if (queue.length === 0) {
+        newCurrentIndex = null;
+        // Finish the queue
+        await setStorage({
+          [STORAGE_KEYS.QUEUE]: queue,
+          [STORAGE_KEYS.CURRENT_INDEX]: null,
+          [STORAGE_KEYS.PLAYBACK_STATUS]: 'queue_finished',
+          [STORAGE_KEYS.PLAYBACK_DETAILS]: 'Antrean kosong setelah dihapus',
+        });
+        await sendMessage({ action: 'FINISH_QUEUE' });
+        setStatus('Antrean kosong — playback dihentikan');
+      } else {
+        // Advance to next track from the same position
+        newCurrentIndex = Math.min(index, queue.length - 1);
+        await setStorage({
+          [STORAGE_KEYS.QUEUE]: queue,
+          [STORAGE_KEYS.CURRENT_INDEX]: newCurrentIndex,
+        });
+        await sendMessage({ action: 'NEXT_TRACK' });
+        setStatus(`Dihapus: "${removedTrack}" — melanjutkan ke lagu berikutnya`);
+      }
+    } else if (index < currentIndex) {
+      // Deleting a track before current, decrement index
+      newCurrentIndex = currentIndex - 1;
+      await setStorage({
+        [STORAGE_KEYS.QUEUE]: queue,
+        [STORAGE_KEYS.CURRENT_INDEX]: newCurrentIndex,
+      });
+      setStatus(`Dihapus: "${removedTrack}"`);
+    } else {
+      // Deleting after current, no index change needed
+      await setStorage({ [STORAGE_KEYS.QUEUE]: queue });
+      setStatus(`Dihapus: "${removedTrack}"`);
+    }
+  } else {
+    await setStorage({ [STORAGE_KEYS.QUEUE]: queue });
+    setStatus(`Dihapus: "${removedTrack}"`);
+  }
+
+  refreshQueueUI();
+}
+
+/**
+ * Clear the entire queue
+ */
+async function clearQueue() {
+  const data = await getStorage([STORAGE_KEYS.QUEUE]);
+  const queue = normalizeQueue(data[STORAGE_KEYS.QUEUE]);
+
+  if (queue.length === 0) {
+    setStatus('Antrean sudah kosong');
+    return;
+  }
+
+  await setStorage({
+    [STORAGE_KEYS.QUEUE]: [],
+    [STORAGE_KEYS.CURRENT_INDEX]: null,
+    [STORAGE_KEYS.PLAYBACK_STATUS]: 'queue_cleared',
+    [STORAGE_KEYS.PLAYBACK_DETAILS]: 'Antrean dikosongkan oleh pengguna',
+  });
+  await sendMessage({ action: 'FINISH_QUEUE' });
+  setStatus('Semua antrean dihapus');
+  refreshQueueUI();
+}
+
+/**
  * Setup start playlist button and shuffle-on-start
  */
 export function setupQueueEditor() {
   const songListInput = $('songList');
   const startBtn = $('startBtn');
   const shuffleOnStart = $('shuffleOnStart');
+  const clearQueueBtn = $('clearQueueBtn');
 
   if (!startBtn || !songListInput) return;
 
@@ -91,10 +188,23 @@ export function setupQueueEditor() {
     }
   });
 
+  // Clear all queue button
+  if (clearQueueBtn) {
+    clearQueueBtn.addEventListener('click', async () => {
+      const confirmed = confirm('Hapus SEMUA antrean? Tindakan ini tidak bisa dibatalkan.');
+      if (!confirmed) return;
+      await clearQueue();
+    });
+  }
+
   // Listen for storage changes to update shuffle checkbox
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === 'local' && changes[STORAGE_KEYS.SHUFFLE_ENABLED]) {
       if (shuffleOnStart) shuffleOnStart.checked = changes[STORAGE_KEYS.SHUFFLE_ENABLED].newValue === true;
+    }
+    // Refresh UI when queue changes from other contexts (background/options)
+    if (areaName === 'local' && changes[STORAGE_KEYS.QUEUE]) {
+      void refreshQueueUI();
     }
   });
 }

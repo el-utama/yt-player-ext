@@ -539,6 +539,75 @@ html[data-popup-size="large"] #queueList { max-height: 220px; font-size: 13px; }
 html[data-popup-size="small"] #queueList li { padding: 4px 6px; }
 html[data-popup-size="large"] #queueList li { padding: 6px 10px; }
 
+/* Delete button per queue item */
+#queueList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.queue-delete-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: #272727;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ff6b6b;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.queue-delete-btn:hover {
+  background: #333;
+  border-color: #ff6b6b;
+  color: #ff0000;
+}
+.queue-delete-btn:focus-visible {
+  outline: 2px solid #ff6b6b;
+  outline-offset: 2px;
+}
+
+/* Clear all queue button */
+.queue-clear-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+}
+.queue-clear-actions .danger {
+  flex: 1;
+  padding: 6px 8px;
+  background: #3a0a0a;
+  border: 1px solid #662222;
+  border-radius: 4px;
+  color: #ff6b6b;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.queue-clear-actions .danger:hover {
+  background: #4a0f0f;
+  border-color: #ff6b6b;
+  color: #ff0000;
+}
+.queue-clear-actions .danger:focus-visible {
+  outline: 2px solid #ff6b6b;
+  outline-offset: 2px;
+}
+html[data-popup-size="small"] .queue-clear-actions .danger {
+  padding: 4px 6px;
+  font-size: 10px;
+}
+html[data-popup-size="large"] .queue-clear-actions .danger {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
 .placeholder {
   color: #666;
   font-size: 11px;

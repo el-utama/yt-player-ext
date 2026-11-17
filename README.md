@@ -2,7 +2,7 @@
 
 Manifest V3 Chrome Extension untuk menjalankan antrean lagu berbasis teks di YouTube Music dan mencatat histori pemutaran lokal secara selektif.
 
-> **Current version:** `3.4.5`
+> **Current version:** `3.4.6`
 
 ## Bahasa / Language
 
@@ -448,6 +448,12 @@ Extension ini tidak menggunakan YouTube Data API dan tidak mengirim histori ke s
 
 ## Riwayat Perubahan
 
+### 3.4.6
+
+- **Fitur: Hapus antrean (per item & semua)** — tombol 🗑️ pada setiap item antrean di popup untuk menghapus lagu tertentu; jika lagu yang sedang diputar dihapus, extension otomatis melanjutkan ke lagu berikutnya. Tombol "Hapus Semua Antrean" untuk mengosongkan seluruh antrean sekaligus (dengan konfirmasi).
+- **Perbaikan: currentIndex disesuaikan otomatis** saat item sebelum track yang sedang diputar dihapus, sehingga indeks pemutaran tidak tergeser.
+- **Background: handler FINISH_QUEUE** untuk membersihkan state antrean saat pengguna mengosongkan antrean.
+
 ### 3.4.5
 
 - **Fitur: Pencarian fallback ke filter "Songs"** — jika pencarian gagal menemukan hasil yang cocok (judul + artis), extension otomatis mengklik chip filter "Songs" dan mencoba lagi, karena beberapa lagu hanya muncul pada hasil filtered Songs.
@@ -878,6 +884,12 @@ The extension does not use the YouTube Data API and does not send scrobble histo
 - Manifest V3 service workers may be suspended while idle. The extension reconciles the player tab whenever the worker wakes up, but service-worker restart should still be included in testing.
 
 ## Changelog
+
+### 3.4.6
+
+- **Feature: Delete queue (per item & all)** — trash button 🗑️ on each queue item in popup to delete a specific track; if the currently playing track is deleted, the extension automatically continues to the next track. "Clear All Queue" button to empty the entire queue at once (with confirmation).
+- **Fix: currentIndex auto-adjusted** when an item before the currently playing track is deleted, so playback index does not shift.
+- **Background: FINISH_QUEUE handler** to clean up queue state when user clears the queue.
 
 ### 3.4.5
 
