@@ -74,7 +74,7 @@ export const state = {
   scrollSimIntervalMs: 800,
   scrollSimScrollAmountPx: { min: 50, max: 150 },
   lastUserActivityAt: Date.now(),
-  nextScrollSimulationAt: 0,
+  nextScrollSimulationAt: Date.now(),
   scrollSimulationActive: false,
 };
 
@@ -167,7 +167,9 @@ export function resetScrollSimulationTimer() {
  */
 export function recordUserActivity() {
   state.lastUserActivityAt = Date.now();
-  // Reschedule next simulation based on new activity time
+  // Don't reschedule when the simulation itself is what generated the
+  // activity (scrollBy/wheel/mousemove dispatched by simulateHumanScroll),
+  // otherwise the simulation resets its own timer and never runs again.
   if (state.scrollSimulationEnabled && !state.scrollSimulationActive) {
     const minMs = state.scrollSimMinMinutes * 60 * 1000;
     const maxMs = state.scrollSimMaxMinutes * 60 * 1000;

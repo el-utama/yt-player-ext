@@ -6,7 +6,8 @@ import { advanceAfterDecision } from './scrobble.js';
 import { clickNativeNext, clickNativePrev } from './dom.js';
 import { reportStatus } from '../shared/messaging.js';
 import { reportNowPlaying } from './now-playing.js';
-import { resetTrackState, getTrackIdentity } from './state.js';
+import { resetTrackState } from './state.js';
+import { getTrackIdentity } from '../shared/utils.js';
 import { getTrackTitle } from './dom.js';
 
 /**
