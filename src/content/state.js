@@ -76,6 +76,11 @@ export const state = {
   lastUserActivityAt: Date.now(),
   nextScrollSimulationAt: Date.now(),
   scrollSimulationActive: false,
+
+  // Watch duration tracking (eligible playback per artist, per tab session)
+  watchLastArtist: '',
+  watchSecondsSinceReport: 0,
+  watchLastReportAt: 0,
 };
 
 /**

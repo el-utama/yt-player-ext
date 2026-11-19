@@ -6,3 +6,10 @@ export { playTrackAtIndex, nextTrack, previousTrack, sendControlToPlayer, enqueu
 export { saveScrobble, getScrobbleHistory, clearScrobbleHistory, exportHistoryCsv } from './scrobble.js';
 export { setupMessageListener } from './messaging.js';
 export { getStorage, setStorage, STORAGE_KEYS, isExtensionEnabled } from './storage.js';
+export {
+  startWatchSession,
+  addWatchDuration,
+  getWatchStats,
+  endWatchSession,
+  resetWatchData,
+} from './session.js';

@@ -29,6 +29,8 @@ export const STORAGE_KEYS = {
   NOW_PLAYING: 'nowPlaying',
   DIAGNOSTICS: 'diagnostics',
   SLEEP_TRACKS_PLAYED: 'sleepTracksPlayed',
+  WATCH_SESSION: 'watchSession',
+  WATCH_ALL_TIME: 'watchAllTime',
 };
 
 /**

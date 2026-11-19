@@ -249,6 +249,30 @@ input[type="file"] { display: none; }
 .about-grid dd { margin: 0; color: var(--text); }
 
 /* --------------------------------------------------------
+   Watch Duration Stats Table
+   -------------------------------------------------------- */
+#watchStatsTable th {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 2px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#watchStatsTable td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+#watchStatsTable tr:hover {
+  background: #1a1a1a;
+}
+
+/* --------------------------------------------------------
    Footer
    -------------------------------------------------------- */
 footer {

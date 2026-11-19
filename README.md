@@ -2,7 +2,7 @@
 
 Manifest V3 Chrome Extension untuk menjalankan antrean lagu berbasis teks di YouTube Music dan mencatat histori pemutaran lokal secara selektif.
 
-> **Current version:** `3.4.6`
+> **Current version:** `3.4.8`
 
 ## Bahasa / Language
 
@@ -43,6 +43,7 @@ Extension ini menyediakan:
 - **Export/Import settings** (JSON).
 - **Pencarian dan pemilihan hasil diperbaiki** dengan penanganan *featuring artists*, pemisah artis, dan skor kecocokan yang lebih ketat.
 - **Indikator versi** terlihat di `chrome://extensions`; reload ekstensi setelah setiap update.
+- **Total durasi menonton per artis** per sesi (tab YouTube Music) dan semua waktu — dilihat di Options Page → Durasi Menonton. Hanya eligible playback (video berjalan, tidak pause, tidak iklan) yang dihitung.
 
 Extension ini ditujukan untuk penggunaan pribadi pada `https://music.youtube.com`.
 
@@ -196,7 +197,16 @@ Buka tab **Histori (Scrobble)** untuk melihat histori lokal. Tersedia:
 - **Hapus Histori:** menghapus histori lokal.
 - **Export CSV:** mengunduh histori sebagai CSV dengan escaping quote dan timestamp lokal.
 
-### 8. Ukuran popup
+### 8. Total Durasi Menonton per Artis
+
+Buka **Options Page** → tab **Durasi Menonton** untuk melihat total durasi menonton per artis/channel:
+
+- **Sesi Ini:** total durasi eligible playback dalam tab YouTube Music saat ini (direset saat tab ditutup).
+- **Semua Waktu:** total durasi kumulatif sejak data pertama kali dicatat (tidak pernah reset, kecuali melalui tombol Reset).
+
+Durasi hanya dihitung saat video benar-benar diputar (eligible playback). Waktu pause, buffering, dan iklan **tidak** dihitung. Data disimpan di `chrome.storage.local` (lokal, tidak dikirim ke server eksternal).
+
+### 9. Ukuran popup
 
 Popup memiliki tiga mode:
 
@@ -448,6 +458,15 @@ Extension ini tidak menggunakan YouTube Data API dan tidak mengirim histori ke s
 
 ## Riwayat Perubahan
 
+### 3.4.8
+
+- **Fitur: Total durasi menonton per artis** — pelacakan durasi eligible playback per artis per sesi (tab YouTube Music) dan semua waktu, dilihat di Options Page → Durasi Menonton.
+- **Bump versi ke 3.4.8** — rebuild semua artifact (background, content, popup, options).
+
+### 3.4.7
+
+- **Bump versi ke 3.4.7** — sinkronisasi versi antara package.json dan manifest.json.
+
 ### 3.4.6
 
 - **Fitur: Hapus antrean (per item & semua)** — tombol 🗑️ pada setiap item antrean di popup untuk menghapus lagu tertentu; jika lagu yang sedang diputar dihapus, extension otomatis melanjutkan ke lagu berikutnya. Tombol "Hapus Semua Antrean" untuk mengosongkan seluruh antrean sekaligus (dengan konfirmasi).
@@ -520,6 +539,21 @@ Extension ini tidak menggunakan YouTube Data API dan tidak mengirim histori ke s
 
 Tambahkan file lisensi yang sesuai sebelum mendistribusikan project ini. Jika belum ada keputusan lisensi, jangan mengklaim bahwa project ini open-source dengan lisensi tertentu.
 
+## Roadmap
+
+| Tanggal | Versi | Fitur Utama |
+|---------|-------|-------------|
+| 2026-11-09 | v3.2.x (awal) | Initial commit: YT Music Custom Player & Whitelist Scrobbler (Manifest V3) |
+| 2026-11-10 | v3.2.6 | Deteksi autoplay/iklan multibahasa, pause sebelum navigasi, durasi acak + shuffle, perbaikan layout |
+| 2026-11-12 | v3.2.7 | Switch Aktif/Nonaktif global dengan badge, pencarian/pemilihan diperbaiki, tes otomatis |
+| 2026-11-12 | v3.2.8 | UI skip iklan di popup, arsitektur modular + esbuild |
+| 2026-11-14 | v3.3.0 | Skip iklan selesai sepenuhnya (fallback seek/accelerate) |
+| 2026-11-14 | v3.4.0 | Settings v2, Options Page lengkap, popup kompak, Now Playing, random native, loop/shuffle, shortcuts, sleep timer, diagnostik, export/import |
+| 2026-11-15 | v3.4.1 – 3.4.4 | Perbaikan bug: sinkronisasi settings, render antrean popup, inisialisasi Options, enforceQueue |
+| 2026-11-17 | v3.4.5 | Pencarian fallback filter "Songs", simulasi scroll anti "Video dijeda" |
+| 2026-11-17 | v3.4.6 | Hapus antrean (per item & semua), currentIndex disesuaikan otomatis, handler FINISH_QUEUE |
+| 2026-11-19 | v3.4.8 | **Total durasi menonton per artis** per sesi + semua waktu di Options Page |
+
 ---
 
 # English
@@ -550,6 +584,7 @@ It provides:
 - **Global Enable/Disable toggle** to let native YouTube Music playback run without extension interference (badge "OFF" on toolbar icon when disabled).
 - **Improved search & selection** with featuring artist handling, artist separators, and stricter match scoring.
 - **Version indicator** in `chrome://extensions`; reload the extension after each update.
+- **Total watch duration per artist** per session (YouTube Music tab) and all-time — view in Options Page → Watch Duration. Only eligible playback (video playing, not paused, no ads) is counted.
 
 The extension is intended for personal use on `https://music.youtube.com`.
 
@@ -693,7 +728,16 @@ This lets a playlist played directly from YouTube Music run without extension in
 
 Open **Histori (Scrobble)** to view local history. You can clear history or export it as CSV. CSV fields are quoted, internal quotes are escaped, and timestamps use the local locale format.
 
-### 10. Popup sizes
+### 10. Total Watch Duration per Artist
+
+Open **Options Page** → tab **Watch Duration** to see total watch duration per artist/channel:
+
+- **This Session:** total eligible playback duration in the current YouTube Music tab (reset when the tab is closed).
+- **All Time:** cumulative duration since data was first recorded (never reset, except via the Reset button).
+
+Duration is only counted when the video is actually playing (eligible playback). Paused time, buffering, and ads are **not** counted. Data is stored in `chrome.storage.local` (local only, not sent to any external server).
+
+### 11. Popup sizes
 
 - **S:** compact layout, approximately 180 px, icon-only tabs.
 - **M:** approximately 220 px.
@@ -885,6 +929,15 @@ The extension does not use the YouTube Data API and does not send scrobble histo
 
 ## Changelog
 
+### 3.4.8
+
+- **Feature: Total watch duration per artist** — tracking eligible playback duration per artist per session (YouTube Music tab) and all-time, viewable in Options Page → Watch Duration.
+- **Bump version to 3.4.8** — rebuild all artifacts (background, content, popup, options).
+
+### 3.4.7
+
+- **Bump version to 3.4.7** — sync version between package.json and manifest.json.
+
 ### 3.4.6
 
 - **Feature: Delete queue (per item & all)** — trash button 🗑️ on each queue item in popup to delete a specific track; if the currently playing track is deleted, the extension automatically continues to the next track. "Clear All Queue" button to empty the entire queue at once (with confirmation).
@@ -952,6 +1005,21 @@ The extension does not use the YouTube Data API and does not send scrobble histo
 ### 3.2.8
 
 - Added automatic ad-skip settings (minimum delay and maximum wait) to the popup.
+
+## Roadmap
+
+| Tanggal | Versi | Fitur Utama |
+|---------|-------|-------------|
+| 2026-11-09 | v3.2.x (awal) | Initial commit: YT Music Custom Player & Whitelist Scrobbler (Manifest V3) |
+| 2026-11-10 | v3.2.6 | Multilingual autoplay/ad detection, pause before navigation, random duration + shuffle, layout fixes |
+| 2026-11-12 | v3.2.7 | Global extension toggle with badge, improved search/selection, automated test |
+| 2026-11-12 | v3.2.8 | Ad-Skip UI to popup, modular architecture + esbuild |
+| 2026-11-14 | v3.3.0 | Ad skip actually ends ads (seek/accelerate fallback) |
+| 2026-11-14 | v3.4.0 | Settings v2, full Options Page, compact popup, Now Playing, random native, loop/shuffle, shortcuts, sleep timer, diagnostics, export/import |
+| 2026-11-15 | v3.4.1 – 3.4.4 | Bug fixes: settings sync, popup queue rendering, Options page init, enforceQueue persistence |
+| 2026-11-17 | v3.4.5 | Search Songs filter fallback, scroll simulation anti "Video paused" |
+| 2026-11-17 | v3.4.6 | Delete queue (per item & all), currentIndex auto-adjust, FINISH_QUEUE handler |
+| 2026-11-19 | v3.4.8 | **Total durasi menonton per artis** per sesi + semua waktu di Options Page |
 
 ## License
 

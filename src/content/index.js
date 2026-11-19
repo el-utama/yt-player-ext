@@ -51,6 +51,8 @@ async function bootstrap() {
   await initSettings();
   await initNavigationState(storageGet);
   reportStatus('content_ready');
+  // Start watch session for this tab so eligible playback duration can be tracked.
+  void sendMessage({ action: 'WATCH_SESSION_START' }).catch(() => undefined);
   void handleNavigation();
 }
 

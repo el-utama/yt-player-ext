@@ -1,8 +1,8 @@
 // Content Player - Playback control, bind video, tryStartPlayback
 
 import { state } from './state.js';
-import { findPlayControl, getTrackTitle, isAdShowing, clickNativeNext, simulateHumanScroll } from './dom.js';
-import { reportStatus } from '../shared/messaging.js';
+import { findPlayControl, getTrackTitle, getTrackArtist, isAdShowing, clickNativeNext, simulateHumanScroll } from './dom.js';
+import { reportStatus, sendMessage } from '../shared/messaging.js';
 import { resetTrackState, MIN_SCROBBLE_SECONDS, resetScrollSimulationTimer, recordUserActivity } from './state.js';
 import { getTrackIdentity, isWhitelisted } from '../shared/utils.js';
 import { advanceAfterDecision, maybeScrobble } from './scrobble.js';
@@ -199,9 +199,39 @@ export function tick() {
     state.lastTick = performance.now();
   }
 
+  // Watch duration tracking per artist (eligible playback only)
+  const currentArtist = getTrackArtist();
+  if (currentArtist && currentArtist !== state.watchLastArtist) {
+    // Artist changed: report accumulated seconds for the previous artist
+    if (state.watchLastArtist && state.watchSecondsSinceReport > 0) {
+      void sendMessage({
+        action: 'WATCH_DURATION_UPDATE',
+        artist: state.watchLastArtist,
+        seconds: Math.round(state.watchSecondsSinceReport),
+      });
+    }
+    state.watchLastArtist = currentArtist;
+    state.watchSecondsSinceReport = 0;
+  }
+
   // Eligible time tracking
   if (!ad && !video.paused && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
     state.eligibleSeconds += delta;
+    state.watchSecondsSinceReport += delta;
+  }
+
+  // Periodic watch duration report (every 10 seconds)
+  const nowMs = Date.now();
+  if (nowMs - state.watchLastReportAt >= 10000) {
+    if (state.watchLastArtist && state.watchSecondsSinceReport > 0) {
+      void sendMessage({
+        action: 'WATCH_DURATION_UPDATE',
+        artist: state.watchLastArtist,
+        seconds: Math.round(state.watchSecondsSinceReport),
+      });
+    }
+    state.watchSecondsSinceReport = 0;
+    state.watchLastReportAt = nowMs;
   }
 
   // Auto-advance on video end (extension queue only; native autoplay handles it)

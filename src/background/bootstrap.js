@@ -6,6 +6,7 @@ import { ensurePlayerTabId, getState } from './queue.js';
 import { getStorage, setStorage } from './storage.js';
 import { onTabRemoved } from './tab-manager.js';
 import { handleCommand } from './messaging.js';
+import { endWatchSession } from './session.js';
 import { loadSettings } from '../shared/settings.js';
 
 /**
@@ -43,6 +44,7 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
 // Handle tab removal
 chrome.tabs.onRemoved.addListener((tabId) => {
   onTabRemoved(tabId, getState(), setStorage);
+  void endWatchSession(tabId);
 });
 
 // Handle keyboard shortcuts

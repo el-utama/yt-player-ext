@@ -5,6 +5,13 @@ import { isExtensionEnabled } from './storage.js';
 import { getStorage, setStorage } from './storage.js';
 import { saveScrobble } from './scrobble.js';
 import { nextTrack, previousTrack, playTrackAtIndex, sendControlToPlayer, ensurePlayerTabId, getState, finishQueue } from './queue.js';
+import {
+  startWatchSession,
+  addWatchDuration,
+  getWatchStats,
+  endWatchSession,
+  resetWatchData,
+} from './session.js';
 import { isPlayerSender } from '../shared/messaging.js';
 import { loadSettings, saveSettings } from '../shared/settings.js';
 import { normalizeQueue } from '../shared/utils.js';
@@ -12,6 +19,7 @@ import { flashWarningBadge } from './badge.js';
 
 const CONTENT_ACTIONS = new Set([
   'TRACK_ENDED', 'NEXT_TRACK', 'SCROBBLE', 'PLAYBACK_STATUS', 'CONTENT_READY', 'NOW_PLAYING',
+  'WATCH_SESSION_START', 'WATCH_DURATION_UPDATE',
 ]);
 
 const DIAGNOSTICS_LIMIT = 20;
@@ -264,6 +272,47 @@ export async function handleFinishQueue() {
 }
 
 /**
+ * Handle WATCH_SESSION_START message from content script.
+ * Initializes a watch session for the sender's tab.
+ */
+export async function handleWatchSessionStart(sender) {
+  if (!sender?.tab?.id) return { ok: false, error: 'no-tab-id' };
+  await startWatchSession(sender.tab.id);
+  return { ok: true };
+}
+
+/**
+ * Handle WATCH_DURATION_UPDATE message from content script.
+ * Accumulates eligible playback seconds for an artist in the current tab session.
+ */
+export async function handleWatchDurationUpdate(message, sender) {
+  if (!message?.artist || typeof message.seconds !== 'number') {
+    return { ok: false, error: 'invalid-payload' };
+  }
+  if (!sender?.tab?.id) return { ok: false, error: 'no-tab-id' };
+  await addWatchDuration(sender.tab.id, message.artist, message.seconds);
+  return { ok: true };
+}
+
+/**
+ * Handle GET_WATCH_STATS message (options page).
+ * Returns all watch statistics: per-tab sessions + all-time totals.
+ */
+export async function handleGetWatchStats() {
+  const stats = await getWatchStats();
+  return { ok: true, ...stats };
+}
+
+/**
+ * Handle RESET_WATCH_STATS message (options page).
+ * Clears all watch duration data.
+ */
+export async function handleResetWatchStats() {
+  await resetWatchData();
+  return { ok: true };
+}
+
+/**
  * Route a message to its handler and return the response object.
  */
 export async function handleMessage(message, sender) {
@@ -297,6 +346,14 @@ export async function handleMessage(message, sender) {
       return handleContentReady(sender);
     case 'FINISH_QUEUE':
       return handleFinishQueue();
+    case 'WATCH_SESSION_START':
+      return handleWatchSessionStart(sender);
+    case 'WATCH_DURATION_UPDATE':
+      return handleWatchDurationUpdate(message, sender);
+    case 'GET_WATCH_STATS':
+      return handleGetWatchStats();
+    case 'RESET_WATCH_STATS':
+      return handleResetWatchStats();
     default:
       return { ok: false, error: 'unknown-action' };
   }

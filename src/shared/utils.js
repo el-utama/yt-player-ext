@@ -160,3 +160,21 @@ export function isValidTrackInfo(trackInfo) {
 export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+/**
+ * Format seconds into human readable duration (Indonesian).
+ * Examples: 3661 -> "1 jam 1 menit", 90 -> "1 menit 30 detik", 5 -> "5 detik"
+ */
+export function formatDuration(seconds) {
+  const total = Math.max(0, Math.floor(Number(seconds) || 0));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+
+  const parts = [];
+  if (hours > 0) parts.push(`${hours} jam`);
+  if (minutes > 0) parts.push(`${minutes} menit`);
+  if (secs > 0 || parts.length === 0) parts.push(`${secs} detik`);
+
+  return parts.join(' ');
+}

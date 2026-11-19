@@ -21,6 +21,7 @@
       <button type="button" class="sidenav-item" data-section="queue">Antrean</button>
       <button type="button" class="sidenav-item" data-section="sleep">Sleep Timer</button>
       <button type="button" class="sidenav-item" data-section="diagnostics">Diagnostik</button>
+      <button type="button" class="sidenav-item" data-section="watch">Durasi Menonton</button>
       <button type="button" class="sidenav-item" data-section="data">Data</button>
       <button type="button" class="sidenav-item" data-section="about">Tentang</button>
     </nav>
@@ -229,6 +230,33 @@
           <button id="optClearDiagnostics" type="button">Bersihkan Log</button>
         </div>
         <div id="diagnosticsPreview" class="diagnostics-preview" aria-live="polite"></div>
+      </section>
+
+      <!-- Watch Duration -->
+      <section id="section-watch" class="section" aria-labelledby="watch-title">
+        <h2 id="watch-title">Total Durasi Menonton per Artis</h2>
+        <p class="field-hint">
+          Durasi hanya dihitung saat video benar-benar diputar (eligible playback).
+          Waktu pause, buffering, dan iklan tidak dihitung.
+        </p>
+        <div class="actions" style="margin-bottom: 16px;">
+          <button id="optRefreshWatch" type="button">Segarkan</button>
+          <button id="optResetWatchStats" type="button" class="danger" style="margin-left: 8px;">Reset Semua Data</button>
+        </div>
+        <div id="watchStatsEmpty" style="display: none; color: var(--muted); font-style: italic;">
+          Belum ada data durasi menonton. Putar beberapa lagu di YouTube Music melalui ekstensi.
+        </div>
+        <table id="watchStatsTable" style="display: none; width: 100%; border-collapse: collapse; margin-top: 12px;">
+          <thead>
+            <tr>
+              <th style="text-align: left; padding: 8px; border-bottom: 1px solid var(--border);">Artis / Channel</th>
+              <th style="text-align: left; padding: 8px; border-bottom: 1px solid var(--border);">Sesi Ini (tab ini)</th>
+              <th style="text-align: left; padding: 8px; border-bottom: 1px solid var(--border);">Semua Waktu</th>
+            </tr>
+          </thead>
+          <tbody id="watchStatsBody"></tbody>
+        </table>
+        <p id="watchStatsTotal" style="margin-top: 12px; font-weight: 600; color: var(--text);"></p>
       </section>
 
       <!-- Data -->

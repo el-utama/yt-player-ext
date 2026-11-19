@@ -1,6 +1,7 @@
 // Options Page - Full settings management
 
 import { loadSettings, exportSettingsPayload, importSettingsPayload, DEFAULT_SETTINGS } from '../shared/settings.js';
+import { formatDuration } from '../shared/utils.js';
 import { sendMessage } from '../shared/messaging.js';
 import { getStorage, setStorage, STORAGE_KEYS } from './storage.js';
 
@@ -63,6 +64,14 @@ function cacheElements() {
     copyDiagnostics: $('#optCopyDiagnostics'),
     clearDiagnostics: $('#optClearDiagnostics'),
     diagnosticsPreview: $('#diagnosticsPreview'),
+
+    // Watch Duration
+    refreshWatch: $('#optRefreshWatch'),
+    resetWatchStats: $('#optResetWatchStats'),
+    watchStatsTable: $('#watchStatsTable'),
+    watchStatsBody: $('#watchStatsBody'),
+    watchStatsEmpty: $('#watchStatsEmpty'),
+    watchStatsTotal: $('#watchStatsTotal'),
 
     // Data
     exportSettings: $('#optExportSettings'),
@@ -314,6 +323,10 @@ function setupBindings() {
   elements.copyDiagnostics.addEventListener('click', copyDiagnostics);
   elements.clearDiagnostics.addEventListener('click', clearDiagnostics);
 
+  // Watch Duration
+  elements.refreshWatch.addEventListener('click', loadWatchStats);
+  elements.resetWatchStats.addEventListener('click', resetWatchStats);
+
   // Data
   elements.exportSettings.addEventListener('click', exportSettings);
   elements.exportHistory.addEventListener('click', exportHistory);
@@ -561,6 +574,100 @@ async function clearHistory() {
   showToast('Histori dihapus', 'success');
 }
 
+// Watch Duration Stats
+async function loadWatchStats() {
+  try {
+    const response = await sendMessage({ action: 'GET_WATCH_STATS' });
+    if (!response.ok) throw new Error(response.error);
+
+    const sessions = response.sessions || {};
+    const allTime = response.allTime || {};
+
+    // Aggregate per-artist across all active sessions
+    const artistSessionSeconds = {};
+    let anySession = false;
+    for (const [tabId, session] of Object.entries(sessions)) {
+      if (!session || !session.artists) continue;
+      anySession = true;
+      for (const [artist, seconds] of Object.entries(session.artists)) {
+        artistSessionSeconds[artist] = (artistSessionSeconds[artist] || 0) + seconds;
+      }
+    }
+
+    const allArtists = new Set([...Object.keys(artistSessionSeconds), ...Object.keys(allTime)]);
+
+    if (allArtists.size === 0) {
+      elements.watchStatsTable.style.display = 'none';
+      elements.watchStatsEmpty.style.display = 'block';
+      elements.watchStatsTotal.textContent = '';
+      return;
+    }
+
+    elements.watchStatsEmpty.style.display = 'none';
+    elements.watchStatsTable.style.display = 'table';
+
+    const tbody = elements.watchStatsBody;
+    tbody.innerHTML = '';
+
+    let grandTotal = 0;
+
+    const sortedArtists = [...allArtists].sort((a, b) => {
+      const aTotal = (artistSessionSeconds[a] || 0) + (allTime[a] || 0);
+      const bTotal = (artistSessionSeconds[b] || 0) + (allTime[b] || 0);
+      return bTotal - aTotal;
+    });
+
+    for (const artist of sortedArtists) {
+      const sessionSecs = artistSessionSeconds[artist] || 0;
+      const allTimeSecs = allTime[artist] || 0;
+      const total = sessionSecs + allTimeSecs;
+      grandTotal += total;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="padding: 8px; border-bottom: 1px solid #333;">${escapeHtml(artist)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #333; font-family: monospace;">${formatDuration(sessionSecs)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #333; font-family: monospace;">${formatDuration(allTimeSecs)}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    // Grand total row
+    const totalRow = document.createElement('tr');
+    totalRow.innerHTML = `
+      <td style="padding: 8px; border-top: 2px solid var(--border); font-weight: 600;">Total</td>
+      <td style="padding: 8px; border-top: 2px solid var(--border); font-family: monospace; font-weight: 600;"></td>
+      <td style="padding: 8px; border-top: 2px solid var(--border); font-family: monospace; font-weight: 600;">${formatDuration(grandTotal)}</td>
+    `;
+    tbody.appendChild(totalRow);
+
+    const totalSession = Object.values(artistSessionSeconds).reduce((a, b) => a + b, 0);
+    elements.watchStatsTotal.textContent = `Total sesi ini: ${formatDuration(totalSession)} | Semua waktu: ${formatDuration(grandTotal)}`;
+  } catch (error) {
+    showToast(`Gagal memuat statistik: ${error.message}`, 'error');
+  }
+}
+
+async function resetWatchStats() {
+  if (!confirm('Hapus seluruh data durasi menonton (sesi + semua waktu)? Tindakan ini tidak bisa dibatalkan.')) return;
+  try {
+    const response = await sendMessage({ action: 'RESET_WATCH_STATS' });
+    if (!response.ok) throw new Error(response.error);
+    elements.watchStatsTable.style.display = 'none';
+    elements.watchStatsEmpty.style.display = 'block';
+    elements.watchStatsTotal.textContent = '';
+    showToast('Data durasi dihapus', 'success');
+  } catch (error) {
+    showToast(`Reset gagal: ${error.message}`, 'error');
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   cacheElements();
@@ -568,4 +675,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupBindings();
   watchSettingsChanges();
   await loadForm();
+  await loadWatchStats();
 });
